@@ -1402,6 +1402,7 @@ $('#expEpub').addEventListener('click', () => {
     'hr{border:0;border-top:1px solid #ccc;margin:12px 0}',
     '.loc{font-size:.8em;color:#8a5a2b}',
     'p.prose,div.prose{margin:.35em 0;text-align:justify !important;text-align-last:right !important}',
+    'p.bayt{margin:.35em 0;text-align:right !important;text-align-last:right !important}',
     '.verse{margin:.3em 0}',
     '.sadr,.ajz{display:block;width:100%;text-align:right}',
     '.ajz{color:#8a5a2b}',
@@ -1475,9 +1476,9 @@ $('#expEpub').addEventListener('click', () => {
         if(p){
           if(!verseOpen){ body += sep() + '<div class="verse">'; verseOpen = true; }
           const FONT = "font-family:'Amariya',serif !important;font-weight:700 !important;";
-          body += '<div class="verse-row" dir="rtl" align="right" style="direction:rtl;text-align:right;width:100%;margin:.4em 0;' + FONT + '">' +
-            '<p class="sadr" dir="rtl" align="right" style="text-align:right !important;width:100%;margin:0 0 .2em;' + FONT + '">' + epubMark(p.sadr, sh.id) + '</p>' +
-            '<p class="ajz" dir="rtl" align="right" style="text-align:right !important;width:100%;margin:0;' + FONT + '">' + epubMark(p.ajz, sh.id) + '</p></div>';
+          // one RTL line per bayt: avoids the reader's prose/poetry block conflict
+          body += '<p class="bayt" dir="rtl" align="right" style="text-align:right !important;text-align-last:right !important;width:100%;margin:.35em 0;' + FONT + '">(' +
+            epubMark(p.sadr, sh.id) + ' ... ' + epubMark(p.ajz, sh.id) + ')</p>';
         } else {
           if(verseOpen){ body += '</div>' + GAP; verseOpen = false; }
           wroteBlock = true;
