@@ -297,6 +297,26 @@ mark.hl-has-note{border-bottom:2px solid var(--accent)}
 .tag{min-height:32px;padding:4px 10px;font-size:12px}
 .scroll-top{width:44px;height:44px;font-size:20px}
 .hl-float{min-height:44px;font-size:15px}
+/* export / copy actions: coloured and thumb-sized */
+.actiongrid .btn{min-height:46px;font-size:13px;font-weight:600}
+.actiongrid .btn .ico{font-size:16px}
+.card-foot .btn{min-height:40px;font-size:13px}
+.card-foot .btn .ico{font-size:15px}
+.poem-actions .btn{min-height:40px;font-size:13px}
+/* history dropdown in the top bar */
+.hist-wrap{position:relative}
+.hist-menu{
+  position:absolute;top:calc(100% + 6px);left:0;z-index:60;min-width:220px;max-width:78vw;
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.16);padding:6px;
+}
+.hist-menu[hidden]{display:none}
+.hist-menu .hi{
+  display:block;width:100%;text-align:right;background:none;border:0;border-radius:8px;
+  padding:9px 10px;font-family:inherit;font-size:13px;color:var(--ink);cursor:pointer;
+}
+.hist-menu .hi:hover{background:var(--accent-soft);color:var(--accent)}
+.hist-menu .empty{font-size:12px;color:var(--muted);padding:8px}
 </style>
 </head>
 <body>
@@ -310,6 +330,10 @@ mark.hl-has-note{border-bottom:2px solid var(--accent)}
     <button class="btn btn-sm" id="fsDown" title="تصغير الخط">A−</button>
     <span id="fsVal">19</span>
     <button class="btn btn-sm" id="fsUp" title="تكبير الخط">A+</button>
+    <div class="hist-wrap">
+      <button class="btn btn-sm" id="histBtn" title="آخر المواضع">🕘</button>
+      <div id="histMenu" class="hist-menu" hidden></div>
+    </div>
     <button class="btn btn-sm" id="focusBtn" title="وضع التركيز">🎯</button>
   </div>
 </header>
@@ -321,7 +345,6 @@ mark.hl-has-note{border-bottom:2px solid var(--accent)}
       <button class="btn btn-sm btn-soft" id="readBackBtn">← رجوع إلى موضع القراءة</button>
       <button class="btn btn-sm" id="readBackDismiss" title="إخفاء">✕</button>
     </div>
-    <div id="histBar" class="histbar" hidden></div>
     <div class="main-sec-banner"><strong id="secName">—</strong><span id="pagePos">—</span></div>
     <div class="chap-bar">
       <select id="spSelect" class="chap-select" aria-label="صفحات هذا القسم"></select>
@@ -392,12 +415,12 @@ mark.hl-has-note{border-bottom:2px solid var(--accent)}
     <div class="setblock">
       <h3>النسخ الاحتياطي والتصدير</h3>
       <div class="actiongrid">
-        <button class="btn btn-sm" id="expJson">⬇️ تصدير JSON</button>
-        <button class="btn btn-sm" id="impJson">⬆️ استيراد JSON</button>
-        <button class="btn btn-sm" id="impMergeBtn">🔗 دمج فوائد من نسخة أخرى</button>
-        <button class="btn btn-sm" id="expMd">📄 تصدير Markdown</button>
-        <button class="btn btn-sm" id="expAnki">🧠 تصدير Anki</button>
-        <button class="btn btn-sm" id="expEpub">📚 تصدير EPUB</button>
+        <button class="btn btn-sm btn-soft" id="expJson"><span class="ico">⬇️</span> تصدير JSON</button>
+        <button class="btn btn-sm btn-soft" id="impJson"><span class="ico">⬆️</span> استيراد JSON</button>
+        <button class="btn btn-sm btn-soft" id="impMergeBtn"><span class="ico">🔗</span> دمج فوائد</button>
+        <button class="btn btn-sm btn-ok" id="expMd"><span class="ico">📄</span> Markdown</button>
+        <button class="btn btn-sm btn-accent" id="expAnki"><span class="ico">🧠</span> Anki</button>
+        <button class="btn btn-sm btn-accent" id="expEpub"><span class="ico">📚</span> EPUB</button>
         <button class="btn btn-sm" id="resetAll">↺ إعادة الضبط</button>
       </div>
       <input id="fileInput" type="file" accept="application/json,.json" hidden>
@@ -620,7 +643,7 @@ function poemHtml(group, sid, gi){
   }).join('');
   return '<div class="poem-box" data-pkey="' + escapeHtml(key) + '">' + rows +
     '<div class="poem-actions">' +
-      '<button class="btn btn-sm" data-act="copyV" data-key="' + escapeHtml(key) + '">📋 نسخ</button>' +
+      '<button class="btn btn-sm btn-soft" data-act="copyV" data-key="' + escapeHtml(key) + '"><span class="ico">📋</span> نسخ</button>' +
       '<button class="btn btn-sm ' + (state.favV[key] ? 'btn-soft' : '') + '" data-act="favV" data-key="' + escapeHtml(key) + '">' + (state.favV[key] ? '★ مفضل' : '☆ تفضيل') + '</button>' +
       '<button class="btn btn-sm ' + memClass(state.memV[key] || 0) + '" data-act="memV" data-key="' + escapeHtml(key) + '">' + MEM_LABEL[state.memV[key] || 0] + '</button>' +
     '</div></div>';
@@ -664,7 +687,7 @@ function shahidHtml(sh){
     '<div class="card-foot">' +
       '<button class="btn btn-sm ' + (state.fav[id] ? 'btn-soft' : '') + '" data-act="fav" data-id="' + escapeHtml(id) + '">' + (state.fav[id] ? '★ في المختارات' : '☆ أضف للمختارات') + '</button>' +
       '<button class="btn btn-sm ' + memClass(mem) + '" data-act="mem" data-id="' + escapeHtml(id) + '">' + MEM_LABEL[mem] + '</button>' +
-      '<button class="btn btn-sm" data-act="copy" data-id="' + escapeHtml(id) + '">📋 نسخ</button>' +
+      '<button class="btn btn-sm btn-soft" data-act="copy" data-id="' + escapeHtml(id) + '"><span class="ico">📋</span> نسخ</button>' +
       '<button class="btn btn-sm ' + (hasBenefit ? 'btn-ok' : '') + '" data-act="benefit" data-id="' + escapeHtml(id) + '">✍️ ' + (hasBenefit ? 'فائدتي ✓' : 'أضف فائدة') + '</button>' +
       '<button class="btn btn-sm" data-act="edit" data-id="' + escapeHtml(id) + '">تصحيح النص</button>' +
     '</div>' +
@@ -735,11 +758,15 @@ function markPosition(){
   save(); renderHistory();
 }
 function renderHistory(){
-  const bar = $('#histBar'); if(!bar) return;
+  const menu = $('#histMenu'); if(!menu) return;
   const h = state.history || [];
-  bar.hidden = h.length === 0;
-  bar.innerHTML = '<span class="lbl">آخر المواضع:</span>' + h.map((x, i) =>
-    '<button class="hist" data-hist="' + i + '" title="الانتقال إلى الموقع ' + arNum(x.loc) + '">📍 ' + arNum(x.loc) + '</button>').join('');
+  menu.innerHTML = h.length
+    ? '<div class="empty" style="font-weight:600">آخر المواضع</div>' + h.map((x, i) => {
+        const sh = byId(x.sid);
+        return '<button class="hi" data-hist="' + i + '">📍 ' + arNum(x.loc) +
+          (sh ? ' — ' + escapeHtml(sh.sec.slice(0, 34)) : '') + '</button>';
+      }).join('')
+    : '<div class="empty">لا توجد مواضع بعد</div>';
 }
 function stats(){
   return {
@@ -1268,10 +1295,18 @@ $('#secStrip').addEventListener('click', e => {
   const p = pagesOfTopic(b.dataset.topic)[0]; if(p) gotoPage(PAGES.indexOf(p));
 });
 $('#spSelect').addEventListener('change', e => gotoPage(parseInt(e.target.value, 10)));
-$('#histBar').addEventListener('click', e => {
+$('#histBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  const m = $('#histMenu'); m.hidden = !m.hidden;
+});
+$('#histMenu').addEventListener('click', e => {
   const b = e.target.closest('[data-hist]'); if(!b) return;
-  const h = state.history[parseInt(b.dataset.hist, 10)]; if(!h) return;
-  gotoPage(h.page, h.sid);
+  const h = state.history[parseInt(b.dataset.hist, 10)];
+  $('#histMenu').hidden = true;
+  if(h) gotoShahid(h.sid);
+});
+document.addEventListener('click', e => {
+  if(!e.target.closest('.hist-wrap')) $('#histMenu').hidden = true;
 });
 function stepPage(d){ const t = state.page + d; if(t >= 0 && t < PAGES.length) gotoPage(t); window.scrollTo({top:0}); }
 ['prevBtn','prevBtnBottom'].forEach(id => $('#'+id).addEventListener('click', () => stepPage(-1)));
@@ -1361,7 +1396,8 @@ $('#expEpub').addEventListener('click', () => {
     'h1{font-size:1.4em;margin:0 0 12px}',
     'h2{font-size:1.05em;margin:18px 0 8px}',
     'h3{font-size:.95em;margin:10px 0 4px}',
-    '.shahid{margin:0 0 12px;padding-bottom:10px;border-bottom:1px solid #ccc;page-break-inside:avoid}',
+    '.shahid{margin:0 0 12px;padding-bottom:10px;page-break-inside:avoid}',
+    'hr{border:0;border-top:1px solid #ccc;margin:12px 0}',
     '.loc{font-size:.8em;color:#8a5a2b}',
     '.prose{margin:.35em 0;text-align:justify}',
     '.verse{margin:.3em 0}',
@@ -1386,8 +1422,22 @@ $('#expEpub').addEventListener('click', () => {
     .concat(chapFiles.map((f,i) => '<item id="c' + i + '" href="' + f + '" media-type="application/xhtml+xml"/>')).join('');
   const spine = ['<itemref idref="nav"/>'].concat(chapFiles.map((_,i) => '<itemref idref="c' + i + '"/>')).join('');
   add('OEBPS/content.opf', '<?xml version="1.0" encoding="UTF-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid" dir="rtl"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>زهر الآداب وثمر الألباب</dc:title><dc:language>ar</dc:language><dc:identifier id="uid">urn:uuid:zahr-aladab-kashkol</dc:identifier></metadata><manifest>' + manifest + '</manifest><spine>' + spine + '</spine></package>');
+  const topicSections = TOPICS.map(t => {
+    const seen = {}, list = [];
+    BOOK.filter(x => x.topic === t).forEach(x => {
+      const m = String(x.bab).match(/(\d+)/);
+      const n = m ? m[1] : '';
+      if(n && !seen[n]){
+        seen[n] = 1;
+        const clean = x.sec.replace(/\s*—\s*الجزء\s*\d+\s*$/, '');
+        list.push('<li><a href="' + chapFiles[TOPICS.indexOf(t)] + '#p' + n + '">' + xesc(clean) + '</a></li>');
+      }
+    });
+    return list.join('');
+  });
   add('OEBPS/nav.xhtml', '<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml" dir="rtl" lang="ar"><head><title>المحتويات</title><link rel="stylesheet" type="text/css" href="style.css"/></head><body><h1>المحتويات</h1><ol>' +
-    TOPICS.map((t,i) => '<li><a href="' + chapFiles[i] + '">' + xesc(t) + '</a></li>').join('') + '</ol></body></html>');
+    TOPICS.map((t,i) => '<li><a href="' + chapFiles[i] + '">' + xesc(t) + '</a>' +
+      (topicSections[i] ? '<ul>' + topicSections[i] + '</ul>' : '') + '</li>').join('') + '</ol></body></html>');
   const epubHighlights = state.highs || [];
   const epubMark = (text, sid) => {
     let out = xesc(text);
@@ -1413,8 +1463,9 @@ $('#expEpub').addEventListener('click', () => {
         const p = parse(ln);
         if(p){
           if(!verseOpen){ body += '<div class="verse">'; verseOpen = true; }
-          body += '<div class="verse-row"><span class="sadr">' + epubMark(p.sadr, sh.id) + '</span>' +
-            '<span class="ajz">' + epubMark(p.ajz, sh.id) + '</span></div>';
+          body += '<div class="verse-row" style="direction:rtl;text-align:right">' +
+            '<span class="sadr" style="display:block;width:100%;text-align:right;direction:rtl">' + epubMark(p.sadr, sh.id) + '</span>' +
+            '<span class="ajz" style="display:block;width:100%;text-align:right;direction:rtl">' + epubMark(p.ajz, sh.id) + '</span></div>';
         } else {
           if(verseOpen){ body += '</div>'; verseOpen = false; }
           body += '<p class="prose">' + epubMark(ln, sh.id) + '</p>';
@@ -1428,10 +1479,9 @@ $('#expEpub').addEventListener('click', () => {
       }
       const ben = (state.benefits || {})[sh.id];
       if(ben && ben.trim()) body += '<div class="benefit">الفائدة: ' + xesc(ben) + '</div>';
-      if(sh.tags && sh.tags.length) body += '<div class="tags">الوسوم: ' + sh.tags.map(xesc).join('، ') + '</div>';
       epubHighlights.filter(h => h.sid === sh.id && h.note).forEach(h =>
         body += '<div class="note">تظليل: ' + xesc(h.text) + ' — ' + xesc(h.note) + '</div>');
-      body += '</div>';
+      body += '</div><hr style="border:0;border-top:1px solid #ccc;margin:12px 0"/>';
     });
     // the source index becomes a real linked table of contents
     if(t === 'الفهرس'){
