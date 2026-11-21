@@ -354,10 +354,22 @@ mark.hl-has-note{border-bottom:2px solid var(--accent)}
         <button class="btn btn-sm" id="impJson">⬆️ استيراد JSON</button>
         <button class="btn btn-sm" id="impMergeBtn">🔗 دمج فوائد من نسخة أخرى</button>
         <button class="btn btn-sm" id="expMd">📄 تصدير Markdown</button>
+        <button class="btn btn-sm" id="expAnki">🧠 تصدير Anki</button>
+        <button class="btn btn-sm" id="expEpub">📚 تصدير EPUB</button>
         <button class="btn btn-sm" id="resetAll">↺ إعادة الضبط</button>
       </div>
       <input id="fileInput" type="file" accept="application/json,.json" hidden>
       <div class="hint">تُحفظ ملاحظاتك وتعديلاتك في هذا الجهاز فقط (localStorage). صدّر نسخة قبل مسح بيانات Safari.</div>
+    </div>
+    <div class="setblock">
+      <h3>المزامنة التلقائية (اختيارية)</h3>
+      <div class="hint">تعمل عبر GitHub Gist خاص بك: أنشئ PAT بصلاحية <code>gist</code> من إعدادات GitHub، ثم ابدأ المزامنة. تُحفظ بياناتك في Gist خاص، وتُسحب وتُدمج عند كل فتح للصفحة أو عودة إليها. الرمز يبقى على جهازك فقط.</div>
+      <input id="syncToken" type="password" placeholder="GitHub PAT (صلاحية gist)" style="margin-top:8px">
+      <div class="actiongrid" style="margin-top:8px">
+        <button class="btn btn-sm" id="syncEnable">🔗 تفعيل المزامنة</button>
+        <button class="btn btn-sm" id="syncNow">🔄 مزامنة الآن</button>
+      </div>
+      <div id="syncStatus" class="hint">غير مفعّلة</div>
     </div>
     <div class="setblock">
       <h3>عن الكتاب</h3>
@@ -1084,7 +1096,7 @@ $('#fileInput').addEventListener('change', e => {
         });
         (incoming.visited || []); // keep current reading progress on merge
       }
-      save(); applyLook(); renderAll();
+      save(); applyLook(); renderAll(); autoSync();
       toast(importMode === 'full' ? 'تم استيراد النسخة' : 'تم دمج الفوائد والمختارات من النسخة الأخرى');
     }catch(err){ toast('ملف غير صالح'); }
   };
@@ -1163,6 +1175,171 @@ $('#myPos').addEventListener('click', () => {
 });
 window.addEventListener('scroll', () => { $('#scrollTopBtn').style.display = window.scrollY > 300 ? 'flex' : 'none'; }, {passive:true});
 $('#scrollTopBtn').addEventListener('click', () => window.scrollTo({top:0, behavior:'smooth'}));
+
+/* ---------- Anki export ---------- */
+function ankiEscape(s){ return String(s == null ? '' : s).replace(/\t/g,' ').replace(/\r?\n/g,'<br>'); }
+$('#expAnki').addEventListener('click', () => {
+  const rows = ['#separator:Tab', '#html:true', '#tags:Col3'];
+  const add = (front, back, tags) => rows.push(ankiEscape(front) + '\t' + ankiEscape(back) + '\t' + ankiEscape(tags));
+  Object.keys(state.benefits || {}).forEach(id => {
+    const v = (state.benefits[id] || '').trim(); if(!v) return;
+    const sh = byId(id); if(!sh) return;
+    add('الموقع ' + sh.loc + ' — ' + sh.sec, v, (sh.topic || '').replace(/\s+/g,'_') + ' ' + (sh.tags||[]).join(' ').replace(/\s+/g,'_'));
+  });
+  (state.highs || []).forEach(h => {
+    const sh = byId(h.sid); if(!sh) return;
+    add('الموقع ' + sh.loc + ' — تظليل: ' + h.text, h.note || 'ما الفائدة من هذا التظليل؟', 'تظليل');
+  });
+  download('zahr-aladab-anki-' + todayKey() + '.txt', rows.join('\n'), 'text/plain;charset=utf-8');
+  toast('تم تصدير ' + (rows.length - 3) + ' بطاقة Anki');
+});
+
+/* ---------- minimal EPUB writer (store-only ZIP, no dependencies) ---------- */
+function crc32(buf){
+  let crc = 0xFFFFFFFF;
+  for(let i=0;i<buf.length;i++){
+    let c = buf[i] ^ (crc & 0xFF);
+    for(let k=0;k<8;k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    crc = c ^ (crc >>> 8);
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+function makeZip(files){
+  const enc = new TextEncoder(), locals = [], centrals = [];
+  let offset = 0;
+  files.forEach(f => {
+    const name = enc.encode(f.name), data = f.data, crc = crc32(data);
+    const local = new Uint8Array(30 + name.length + data.length), lv = new DataView(local.buffer);
+    lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true);
+    lv.setUint16(6, 0, true); lv.setUint16(8, 0, true); lv.setUint16(10, 0, true);
+    lv.setUint16(12, 0, true); lv.setUint32(14, crc, true);
+    lv.setUint32(18, data.length, true); lv.setUint32(22, data.length, true);
+    lv.setUint16(26, name.length, true); lv.setUint16(28, 0, true);
+    local.set(name, 30); local.set(data, 30 + name.length);
+    locals.push(local);
+    const cd = new Uint8Array(46 + name.length), cv = new DataView(cd.buffer);
+    cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0, true); cv.setUint16(10, 0, true); cv.setUint16(12, 0, true); cv.setUint16(14, 0, true);
+    cv.setUint32(16, crc, true); cv.setUint32(20, data.length, true); cv.setUint32(24, data.length, true);
+    cv.setUint16(28, name.length, true); cv.setUint16(30, 0, true); cv.setUint16(32, 0, true);
+    cv.setUint16(34, 0, true); cv.setUint16(36, 0, true); cv.setUint32(38, 0, true);
+    cv.setUint32(42, offset, true);
+    cd.set(name, 46); centrals.push(cd);
+    offset += local.length;
+  });
+  const cdSize = centrals.reduce((s,x) => s + x.length, 0);
+  const end = new Uint8Array(22), ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true); ev.setUint16(4, 0, true); ev.setUint16(6, 0, true);
+  ev.setUint16(8, files.length, true); ev.setUint16(10, files.length, true);
+  ev.setUint32(12, cdSize, true); ev.setUint32(16, offset, true); ev.setUint16(20, 0, true);
+  return new Blob([...locals, ...centrals, end], {type:'application/epub+zip'});
+}
+function xesc(s){ return escapeHtml(s); }
+$('#expEpub').addEventListener('click', () => {
+  const enc = new TextEncoder(), files = [];
+  const add = (name, text) => files.push({name, data:enc.encode(text)});
+  add('mimetype', 'application/epub+zip');
+  add('META-INF/container.xml', '<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>');
+  const css = 'body{font-family:serif;line-height:1.9}h1,h2{color:#8a5a2b}.bayt{margin:.4em 0}.sadr{text-align:right;display:block}.ajz{text-align:right;display:block;color:#8a5a2b}.benefit{background:#f8f2e7;padding:6px;border-radius:6px}.loc{font-size:.8em;color:#888}';
+  add('OEBPS/style.css', css);
+  const chapFiles = TOPICS.map((t, i) => 'chapter_' + String(i).padStart(3,'0') + '.xhtml');
+  const manifest = ['<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>',
+    '<item id="css" href="style.css" media-type="text/css"/>']
+    .concat(chapFiles.map((f,i) => '<item id="c' + i + '" href="' + f + '" media-type="application/xhtml+xml"/>')).join('');
+  const spine = ['<itemref idref="nav"/>'].concat(chapFiles.map((_,i) => '<itemref idref="c' + i + '"/>')).join('');
+  add('OEBPS/content.opf', '<?xml version="1.0" encoding="UTF-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid" dir="rtl"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>زهر الآداب وثمر الألباب</dc:title><dc:language>ar</dc:language><dc:identifier id="uid">urn:uuid:zahr-aladab-kashkol</dc:identifier></metadata><manifest>' + manifest + '</manifest><spine>' + spine + '</spine></package>');
+  add('OEBPS/nav.xhtml', '<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml" dir="rtl" lang="ar"><head><title>المحتويات</title><link rel="stylesheet" type="text/css" href="style.css"/></head><body><h1>المحتويات</h1><ol>' +
+    TOPICS.map((t,i) => '<li><a href="' + chapFiles[i] + '">' + xesc(t) + '</a></li>').join('') + '</ol></body></html>');
+  TOPICS.forEach((t, i) => {
+    let body = '<h1>' + xesc(t) + '</h1>';
+    BOOK.filter(x => x.topic === t).forEach(sh => {
+      body += '<div class="shahid"><div class="loc">الموقع ' + sh.loc + ' — ' + xesc(sh.sec) + '</div>';
+      shahidText(sh).split('\n').forEach(ln => {
+        const p = parse(ln);
+        if(p) body += '<div class="bayt"><span class="sadr">' + xesc(p.sadr) + '</span><span class="ajz">' + xesc(p.ajz) + '</span></div>';
+        else body += '<p>' + xesc(ln) + '</p>';
+      });
+      const ben = (state.benefits || {})[sh.id];
+      if(ben && ben.trim()) body += '<p class="benefit">الفائدة: ' + xesc(ben) + '</p>';
+      body += '</div>';
+    });
+    add('OEBPS/' + chapFiles[i], '<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml" dir="rtl" lang="ar"><head><title>' + xesc(t) + '</title><link rel="stylesheet" type="text/css" href="style.css"/></head><body>' + body + '</body></html>');
+  });
+  const blob = makeZip(files);
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = 'zahr-aladab-' + todayKey() + '.epub';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast('تم تصدير EPUB كاملاً (' + BOOK.length + ' شاهداً)');
+});
+
+/* ---------- optional Gist sync ---------- */
+const SYNC_KEY = 'zahr-aladab-sync';
+let syncCfg = null;
+try { syncCfg = JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); } catch(e){}
+const syncStatus = () => { const el = $('#syncStatus'); if(el) el.textContent = syncCfg && syncCfg.id ? 'مرتبط بـ Gist #' + syncCfg.id.slice(0,8) : 'غير مفعّلة'; };
+const API = 'https://api.github.com/gists';
+function syncHeaders(){ return { 'Authorization': 'token ' + syncCfg.token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' }; }
+function syncPayload(){ return JSON.stringify({ bookId:BOOK_ID, bookTitle:BOOK_TITLE, edition:EDITION, exportedAt:new Date().toISOString(), state:state }); }
+function mergeRemote(remote){
+  if(!remote || remote.bookId !== BOOK_ID) return false;
+  ['benefits','fav','favV','mem','memV','edits','visited'].forEach(k => {
+    if(remote.state && remote.state[k]) state[k] = Object.assign({}, remote.state[k], state[k] || {});
+  });
+  if(remote.state && Array.isArray(remote.state.highs)){
+    const ids = new Set((state.highs||[]).map(h => h.id));
+    (state.highs||[]).forEach(h => { if(!ids.has(h.id)) state.highs.push(h); });
+  }
+  save(); renderAll(); return true;
+}
+async function syncPull(){
+  if(!syncCfg || !syncCfg.id) return false;
+  const r = await fetch(API + '/' + syncCfg.id, { headers:syncHeaders(), cache:'no-store' });
+  if(!r.ok) throw new Error('pull ' + r.status);
+  const g = await r.json();
+  const raw = g.files && g.files['zahr-aladab-sync.json'] && g.files['zahr-aladab-sync.json'].content;
+  if(!raw) return false;
+  return mergeRemote(JSON.parse(raw));
+}
+async function syncPush(){
+  if(!syncCfg || !syncCfg.id) return false;
+  const r = await fetch(API + '/' + syncCfg.id, { method:'PATCH', headers:syncHeaders(),
+    body:JSON.stringify({ description:'زهر الآداب — مزامنة الكشكول', files:{'zahr-aladab-sync.json':{content:syncPayload()}} }) });
+  if(!r.ok) throw new Error('push ' + r.status);
+  return true;
+}
+$('#syncEnable').addEventListener('click', async () => {
+  const token = $('#syncToken').value.trim();
+  if(!token){ toast('أدخل PAT أولاً'); return; }
+  syncCfg = { token:token, id:null };
+  try{
+    const r = await fetch(API, { method:'POST', headers:syncHeaders(),
+      body:JSON.stringify({ description:'زهر الآداب — مزامنة الكشكول', public:false,
+        files:{'zahr-aladab-sync.json':{content:syncPayload()}} }) });
+    if(!r.ok) throw new Error(r.status);
+    const g = await r.json(); syncCfg.id = g.id;
+    localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg));
+    $('#syncToken').type = 'password'; $('#syncToken').value = '';
+    syncStatus(); toast('تم تفعيل المزامنة');
+  }catch(e){ toast('تعذّر التفعيل: ' + e.message); }
+});
+$('#syncNow').addEventListener('click', async () => {
+  if(!syncCfg || !syncCfg.id){ toast('المزامنة غير مفعّلة'); return; }
+  try{ await syncPull(); await syncPush(); toast('تمت المزامنة'); }
+  catch(e){ toast('فشل: ' + e.message); }
+});
+syncStatus();
+let syncBusy = false;
+async function autoSync(){
+  if(!syncCfg || !syncCfg.id || syncBusy) return;
+  syncBusy = true;
+  try{ await syncPull(); await syncPush(); }catch(e){}
+  syncBusy = false;
+}
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden && syncCfg && syncCfg.id) syncPush().catch(()=>{});
+  else if(!document.hidden) autoSync();
+});
 
 /* ---------- init ---------- */
 function renderAll(){ renderRead(); renderStats(); renderToday(); renderFav(); renderSearch(); }
