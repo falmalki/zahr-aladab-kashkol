@@ -1467,17 +1467,20 @@ $('#expEpub').addEventListener('click', () => {
         lastSec = sh.sec;
       }
       body += '<div class="shahid" id="loc-' + sh.loc + '">';
-      let verseOpen = false;
+      let verseOpen = false, wroteBlock = false;
+      const GAP = '<div class="blockgap" style="height:.55em;line-height:.55em;margin:0">&#160;</div>';
+      const sep = () => { const s = wroteBlock ? GAP : ''; wroteBlock = true; return s; };
       shahidText(sh).split('\n').forEach(ln => {
         const p = parse(ln);
         if(p){
-          if(!verseOpen){ body += '<div class="verse">'; verseOpen = true; }
+          if(!verseOpen){ body += sep() + '<div class="verse">'; verseOpen = true; }
           const FONT = "font-family:'Amariya',serif !important;font-weight:700 !important;";
           body += '<div class="verse-row" dir="rtl" style="direction:rtl;text-align:right;width:100%;margin:.4em 0;' + FONT + '">' +
             '<div class="sadr" dir="rtl" style="text-align:right !important;width:100%;margin:0 0 .2em;' + FONT + '">' + epubMark(p.sadr, sh.id) + '</div>' +
             '<div class="ajz" dir="rtl" style="text-align:right !important;width:100%;margin:0;' + FONT + '">' + epubMark(p.ajz, sh.id) + '</div></div>';
         } else {
-          if(verseOpen){ body += '</div>'; verseOpen = false; }
+          if(verseOpen){ body += '</div>' + GAP; verseOpen = false; }
+          wroteBlock = true;
           body += '<div class="prose" dir="rtl" style="text-align:justify !important;text-align-last:right !important;width:100%;font-family:\'Amariya\',serif !important;font-weight:700 !important">' + epubMark(ln, sh.id) + '</div>';
         }
       });
