@@ -141,21 +141,14 @@ body.focus-mode .related,body.focus-mode .card-head .meta-txt{display:none}
 body.focus-mode .card-head{justify-content:flex-start}
 .focus-exit{position:fixed;left:12px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:56;display:none}
 body.focus-mode .focus-exit{display:block}
-.kanban{display:flex;gap:6px;overflow-x:auto;padding:4px 0;scrollbar-width:none}
-.kanban::-webkit-scrollbar{display:none}
-.kb-col{flex:0 0 128px;min-width:128px;background:var(--chip);border-radius:9px;padding:6px}
-.kb-col.now-col{background:var(--accent-soft)}
-.kb-col.read-col{background:var(--ok-soft)}
-.kb-col h4{margin:0 0 5px;font-size:10px;font-weight:600;color:var(--muted)}
-.kb-col.now-col h4{color:var(--accent)}
-.kb-col.read-col h4{color:var(--ok)}
-.kb-card{
-  display:block;width:100%;text-align:right;border:1px solid var(--border);background:var(--card);
-  border-radius:7px;padding:5px 6px;margin:0 0 4px;cursor:pointer;font-family:inherit;font-size:11px;color:var(--ink);
+.path-why{font-size:11px;color:var(--muted);line-height:1.6;margin:5px 0 6px}
+.path-teaser{
+  background:var(--poem-bg);border:1px solid var(--poem-border);border-radius:9px;
+  padding:7px 9px;margin-bottom:7px;
 }
-.kb-card .kb-t{display:block;line-height:1.35;max-height:2.7em;overflow:hidden;font-family:var(--reader-font)}
-.kb-card .kb-l{display:block;color:var(--muted);font-size:.78em;margin-top:2px}
-.kb-empty{font-size:10px;color:var(--muted);padding:4px 0}
+.path-teaser p{margin:0 0 4px;font-size:.88em;line-height:1.6;color:var(--ink);font-family:var(--reader-font)}
+.path-teaser p:last-child{margin-bottom:0;color:var(--accent)}
+.path-teaser small{display:block;color:var(--muted);font-size:.75em;text-align:left}
 .kanban .kb.read{background:var(--ok-soft);border-color:#b7dec6;color:var(--ok)}
 .kanban .kb.now{background:var(--accent-soft);border-color:#dfcbb0;color:var(--accent)}
 .path-progress{height:5px;background:var(--chip);border-radius:99px;margin:6px 0 4px;overflow:hidden}
@@ -898,12 +891,12 @@ function allVerses(){
   return out;
 }
 const READING_PATHS = [
-  { t:'الجود والكرم في 5 بطاقات', tags:['الجود'] },
-  { t:'الحكمة والمواعظ في 3 جلسات', tags:['الحكمة'] },
-  { t:'من أقوال الرسول ﷺ', tags:['الرسول والصحابة وأهل البيت'] },
-  { t:'الغزل والهوى', tags:['الغزل'] },
-  { t:'الشيب وتقلب الزمان', tags:['الشيب','الدنيا'] },
-  { t:'السفر والغربة', tags:['السفر'] }
+  { t:'الجود والكرم', tags:['الجود'], why:'لأن الجود أكثر الفوائد العملية تكراراً في الكتاب.' },
+  { t:'الحكمة والمواعظ', tags:['الحكمة'], why:'لأنها تجمع خلاصة التجربة في سطور قصيرة.' },
+  { t:'من أقوال الرسول ﷺ', tags:['الرسول والصحابة وأهل البيت'], why:'لأنها أعلى أساسٍ يستفتح به الكتاب.' },
+  { t:'الغزل والهوى', tags:['الغزل'], why:'لأنه أرقّ ما في الشعر وأقربه إلى القلب.' },
+  { t:'الشيب وتقلب الزمان', tags:['الشيب','الدنيا'], why:'لأنه يذكّر بالزوال في موضع العبرة.' },
+  { t:'السفر والغربة', tags:['السفر'], why:'لأن السفر مَضربُ الأمثال ومَجلبةُ الفوائد.' }
 ];
 function renderBenefitToday(){
   const ids = Object.keys(state.benefits || {}).filter(k => (state.benefits[k]||'').trim());
@@ -948,17 +941,10 @@ function renderPaths(){
       return '<div class="card"><div class="card-head"><span>' + escapeHtml(p.t) + (done ? ' ✅' : '') +
         '</span><span>' + read + '/' + cards.length + '</span></div>' +
         '<div class="path-progress"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="kanban">' + (function(){
-          const rd = cards.filter(x => state.readCards[x.id]);
-          const un = cards.filter(x => !state.readCards[x.id]);
-          const now = un[0], todo = un.slice(1);
-          const mkCard = x => '<button class="kb-card" data-goto="' + escapeHtml(x.id) + '">' +
-            '<span class="kb-t">' + escapeHtml(cardTeaser(x)) + '</span>' +
-            '<span class="kb-l">📍 ' + arNum(x.loc) + '</span></button>';
-          const col = (label, arr, cls) => '<div class="kb-col ' + cls + '"><h4>' + label + ' (' + arr.length + ')</h4>' +
-            (arr.length ? arr.map(mkCard).join('') : '<div class="kb-empty">—</div>') + '</div>';
-          return col('لم تُقرأ', todo, '') + col('قيد القراءة', now ? [now] : [], 'now-col') + col('مقروءة', rd, 'read-col');
-        })() + '</div>' +
+        '<div class="path-why">' + escapeHtml(p.why) + '</div>' +
+        '<div class="path-teaser">' + cards.slice(0, 2).map(x =>
+          '<p>' + escapeHtml(cardTeaser(x)) + '</p>').join('') +
+          '<small>مقتطفات من المسار · اضغط «عرض كل البطاقات» للذهاب</small></div>' +
         '<button class="btn btn-sm btn-soft" data-path="' + i + '">عرض كل البطاقات ←</button></div>';
     }).join('');
   }
