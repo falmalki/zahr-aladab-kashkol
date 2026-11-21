@@ -1468,23 +1468,35 @@ $('#expEpub').addEventListener('click', () => {
         lastSec = sh.sec;
       }
       body += '<div class="shahid" id="loc-' + sh.loc + '">';
+      // merge a short metre label («الخفيف :») into the attribution line before it
+      const METRE_ONLY = /^(?:الطويل|الكامل|الوافر|البسيط|المتقارب|المسرح|المنسرح|الخفيف|الرجز|الرمل|السريع|المديد|الهزج|المجثث|القصيد|مجزوء\s+\S+)\s*[:،]?\s*$/;
+      const blocks = [];
+      shahidText(sh).split('\n').forEach(ln => {
+        const p = parse(ln);
+        if(p){ blocks.push({v:p}); return; }
+        const t = ln.trim();
+        const prev = blocks[blocks.length - 1];
+        if(METRE_ONLY.test(t) && prev && prev.t){
+          prev.t = prev.t.replace(/\s*$/, '') + ' ' + t;
+        } else {
+          blocks.push({t:ln});
+        }
+      });
       let verseOpen = false, wroteBlock = false;
       const GAP = '<div class="blockgap" style="height:.55em;line-height:.55em;margin:0">&#160;</div>';
       const sep = () => { const s = wroteBlock ? GAP : ''; wroteBlock = true; return s; };
-      shahidText(sh).split('\n').forEach(ln => {
-        const p = parse(ln);
-        if(p){
+      const FONT = "font-family:'Amariya',serif !important;font-weight:700 !important;";
+      blocks.forEach(b => {
+        if(b.v){
           if(!verseOpen){ body += sep() + '<div class="verse">'; verseOpen = true; }
-          const FONT = "font-family:'Amariya',serif !important;font-weight:700 !important;";
-          // one RTL line per bayt: avoids the reader's prose/poetry block conflict
-          body += '<p class="bayt" dir="rtl" align="right" style="text-align:right !important;text-align-last:right !important;width:100%;margin:.35em 0;' + FONT + '">(' +
-            epubMark(p.sadr, sh.id) + ' ... ' + epubMark(p.ajz, sh.id) + ')</p>';
+          body += '<div class="verse-row" dir="rtl" align="right" style="direction:rtl;text-align:right;width:100%;margin:.4em 0;' + FONT + '">' +
+            '<p class="sadr" dir="rtl" align="right" style="text-align:right !important;width:100%;margin:0 0 .2em;' + FONT + '">' + epubMark(b.v.sadr, sh.id) + '</p>' +
+            '<p class="ajz" dir="rtl" align="right" style="color:#8a5a2b !important;text-align:right !important;width:100%;margin:0;' + FONT + '">' + epubMark(b.v.ajz, sh.id) + '</p></div>';
         } else {
           if(verseOpen){ body += '</div>' + GAP; verseOpen = false; }
           wroteBlock = true;
-          const shortLine = ln.length < 48;
-          const align = shortLine ? 'right' : 'justify';
-          body += '<p class="prose" dir="rtl" align="right" style="text-align:' + align + ' !important;text-align-last:right !important;width:100%;font-family:\'Amariya\',serif !important;font-weight:700 !important">' + epubMark(ln, sh.id) + '</p>';
+          const align = b.t.length < 48 ? 'right' : 'justify';
+          body += '<p class="prose" dir="rtl" align="right" style="text-align:' + align + ' !important;text-align-last:right !important;width:100%;' + FONT + '">' + epubMark(b.t, sh.id) + '</p>';
         }
       });
       if(verseOpen) body += '</div>';
