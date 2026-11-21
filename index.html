@@ -144,9 +144,12 @@ body.focus-mode .focus-exit{display:block}
 .kanban{display:flex;gap:5px;overflow-x:auto;padding:4px 0;scrollbar-width:none}
 .kanban::-webkit-scrollbar{display:none}
 .kanban .kb{
-  flex:0 0 auto;min-width:64px;text-align:center;border:1px solid var(--border);border-radius:8px;
-  padding:5px 6px;background:var(--chip);font-size:11px;cursor:pointer;color:var(--muted);
+  flex:0 0 auto;width:116px;text-align:right;border:1px solid var(--border);border-radius:8px;
+  padding:6px 7px;background:var(--chip);font-size:11px;cursor:pointer;color:var(--ink);
 }
+.kanban .kb-t{display:block;line-height:1.35;max-height:2.7em;overflow:hidden;font-family:var(--reader-font)}
+.kanban .kb-l{display:block;color:var(--muted);font-size:.78em;margin-top:3px}
+.kanban .kb.read .kb-l{color:var(--ok)}
 .kanban .kb.read{background:var(--ok-soft);border-color:#b7dec6;color:var(--ok)}
 .kanban .kb.now{background:var(--accent-soft);border-color:#dfcbb0;color:var(--accent)}
 .path-progress{height:5px;background:var(--chip);border-radius:99px;margin:6px 0 4px;overflow:hidden}
@@ -913,6 +916,13 @@ let showDonePaths = false;
 function pathCards(p){
   return BOOK.filter(x => p.tags.some(t => (x.tags||[]).indexOf(t) >= 0)).slice(0, 5);
 }
+function cardTeaser(sh){
+  const lines = shahidText(sh).split('\n');
+  const verse = lines.find(l => l.startsWith('('));
+  if(verse){ const p = parse(verse); if(p) return p.sadr; }
+  const prose = lines.find(l => !l.startsWith('(')) || sh.text;
+  return prose.replace(/\s+/g, ' ').slice(0, 56);
+}
 function pathDone(p){
   const cards = pathCards(p);
   return cards.length > 0 && cards.every(x => state.readCards[x.id]);
@@ -933,8 +943,9 @@ function renderPaths(){
         '</span><span>' + read + '/' + cards.length + '</span></div>' +
         '<div class="path-progress"><i style="width:' + pct + '%"></i></div>' +
         '<div class="kanban">' + cards.map(x =>
-          '<button class="kb' + (state.readCards[x.id] ? ' read' : '') + '" data-goto="' + escapeHtml(x.id) + '">📍 ' + arNum(x.loc) +
-          (state.readCards[x.id] ? ' ✓' : '') + '</button>').join('') + '</div>' +
+          '<button class="kb' + (state.readCards[x.id] ? ' read' : '') + '" data-goto="' + escapeHtml(x.id) + '">' +
+          '<span class="kb-t">' + escapeHtml(cardTeaser(x)) + '</span>' +
+          '<span class="kb-l">📍 ' + arNum(x.loc) + (state.readCards[x.id] ? ' ✓' : '') + '</span></button>').join('') + '</div>' +
         '<button class="btn btn-sm btn-soft" data-path="' + i + '">عرض كل البطاقات ←</button></div>';
     }).join('');
   }
