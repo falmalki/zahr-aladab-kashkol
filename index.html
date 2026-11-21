@@ -1411,18 +1411,19 @@ $('#expEpub').addEventListener('click', () => {
   ].join('');
 
   add('OEBPS/style.css', css);
-  const chapFiles = TOPICS.map((t, i) => 'chapter_' + String(i).padStart(3,'0') + '.xhtml');
+  const orderedTopics = ['الفهرس'].concat(TOPICS.filter(t => t !== 'الفهرس'));
+  const chapFiles = orderedTopics.map((t, i) => 'chapter_' + String(i).padStart(3,'0') + '.xhtml');
   const partChapter = {};
   BOOK.forEach(sh => {
     const m = String(sh.bab).match(/(\d+)/);
-    if(m) partChapter[m[1]] = chapFiles[TOPICS.indexOf(sh.topic)];
+    if(m) partChapter[m[1]] = chapFiles[orderedTopics.indexOf(sh.topic)];
   });
   const manifest = ['<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>',
     '<item id="css" href="style.css" media-type="text/css"/>']
     .concat(chapFiles.map((f,i) => '<item id="c' + i + '" href="' + f + '" media-type="application/xhtml+xml"/>')).join('');
   const spine = ['<itemref idref="nav"/>'].concat(chapFiles.map((_,i) => '<itemref idref="c' + i + '"/>')).join('');
   add('OEBPS/content.opf', '<?xml version="1.0" encoding="UTF-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid" dir="rtl"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>زهر الآداب وثمر الألباب</dc:title><dc:language>ar</dc:language><dc:identifier id="uid">urn:uuid:zahr-aladab-kashkol</dc:identifier></metadata><manifest>' + manifest + '</manifest><spine>' + spine + '</spine></package>');
-  const topicSections = TOPICS.map(t => {
+  const topicSections = orderedTopics.map(t => {
     const seen = {}, list = [];
     BOOK.filter(x => x.topic === t).forEach(x => {
       const m = String(x.bab).match(/(\d+)/);
@@ -1430,13 +1431,13 @@ $('#expEpub').addEventListener('click', () => {
       if(n && !seen[n]){
         seen[n] = 1;
         const clean = x.sec.replace(/\s*—\s*الجزء\s*\d+\s*$/, '');
-        list.push('<li><a href="' + chapFiles[TOPICS.indexOf(t)] + '#p' + n + '">' + xesc(clean) + '</a></li>');
+        list.push('<li><a href="' + chapFiles[orderedTopics.indexOf(t)] + '#p' + n + '">' + xesc(clean) + '</a></li>');
       }
     });
     return list.join('');
   });
   add('OEBPS/nav.xhtml', '<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml" dir="rtl" lang="ar"><head><title>المحتويات</title><link rel="stylesheet" type="text/css" href="style.css"/></head><body><h1>المحتويات</h1><ol>' +
-    TOPICS.map((t,i) => '<li><a href="' + chapFiles[i] + '">' + xesc(t) + '</a>' +
+    orderedTopics.map((t,i) => '<li><a href="' + chapFiles[i] + '">' + xesc(t) + '</a>' +
       (topicSections[i] ? '<ul>' + topicSections[i] + '</ul>' : '') + '</li>').join('') + '</ol></body></html>');
   const epubHighlights = state.highs || [];
   const epubMark = (text, sid) => {
@@ -1447,7 +1448,7 @@ $('#expEpub').addEventListener('click', () => {
     });
     return out;
   };
-  TOPICS.forEach((t, i) => {
+  orderedTopics.forEach((t, i) => {
     let body = '<h1>' + xesc(t) + '</h1>';
     let lastSec = '';
     BOOK.filter(x => x.topic === t).forEach(sh => {
@@ -1468,7 +1469,7 @@ $('#expEpub').addEventListener('click', () => {
             '<span class="ajz" style="display:block;width:100%;text-align:right;direction:rtl">' + epubMark(p.ajz, sh.id) + '</span></div>';
         } else {
           if(verseOpen){ body += '</div>'; verseOpen = false; }
-          body += '<p class="prose">' + epubMark(ln, sh.id) + '</p>';
+          body += '<p class="prose" dir="rtl" style="text-align:justify;text-align-last:right">' + epubMark(ln, sh.id) + '</p>';
         }
       });
       if(verseOpen) body += '</div>';
