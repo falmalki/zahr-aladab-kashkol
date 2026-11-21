@@ -115,13 +115,11 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:calc(74px + env(safe-ar
 .poem-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed #e2d4bd}
 .verse-row{display:flex;flex-direction:column;gap:2px;padding:5px 0}
 .verse-row + .verse-row{border-top:1px dashed var(--poem-border)}
-.verse-sadr{text-align:right;font-weight:500}
-.verse-ajz{text-align:right;font-weight:500}
+.verse-sadr,.verse-ajz{text-align:right;font-weight:500}
 @media(min-width:600px){
   .verse-row{flex-direction:row;justify-content:space-between;align-items:baseline;gap:18px}
   .verse-sadr,.verse-ajz{flex:1}
-  .verse-sadr{text-align:right}
-  .verse-ajz{text-align:right}
+  .verse-sadr,.verse-ajz{text-align:right}
 }
 .verse-ajz.ajz-veiled,.ajz-veiled{filter:blur(6px);opacity:.28;cursor:pointer;transition:filter .2s,opacity .2s;user-select:none}
 .ajz-veiled.revealed{filter:none;opacity:1}
