@@ -115,6 +115,20 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:calc(74px + env(safe-ar
 .loc-link{cursor:pointer;color:var(--accent);background:var(--accent-soft);border-color:#dfcbb0}
 .loc-link:hover{background:var(--accent);color:#fff}
 .returnbar .btn.flex1{flex:1}
+.histbar{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:0 0 8px}
+.histbar[hidden]{display:none}
+.histbar .lbl{font-size:11px;color:var(--muted)}
+.hist{
+  font-size:11px;color:var(--accent);background:var(--chip);border:1px solid var(--border);
+  border-radius:999px;padding:2px 8px;cursor:pointer;white-space:nowrap;
+}
+.hist:hover{background:var(--accent);color:#fff}
+.benefit-box{margin-top:8px;background:var(--note-bg);border-radius:12px;padding:10px}
+.benefit-box label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:5px}
+.benefit-box textarea{
+  width:100%;min-height:60px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);
+  background:var(--card);color:var(--ink);font-family:inherit;font-size:14px;line-height:1.6;resize:vertical;
+}
 .badge-ref{background:#fff;border:1px solid var(--border);cursor:pointer;color:var(--accent)}
 .verse-flash{background:var(--accent-soft);border-radius:6px;transition:background .5s}
 .shahid-body{font-family:var(--reader-font);font-size:var(--reader-size);line-height:1.95;user-select:text;-webkit-user-select:text}
@@ -254,6 +268,7 @@ mark.hl-has-note{border-bottom:2px solid var(--accent)}
       <button class="btn btn-sm btn-soft" id="readBackBtn">← رجوع إلى موضع القراءة</button>
       <button class="btn btn-sm" id="readBackDismiss" title="إخفاء">✕</button>
     </div>
+    <div id="histBar" class="histbar" hidden></div>
     <div class="main-sec-banner"><strong id="secName">—</strong><span id="pagePos">—</span></div>
     <div class="chap-bar">
       <select id="spSelect" class="chap-select" aria-label="صفحات هذا القسم"></select>
@@ -418,7 +433,8 @@ const HL_COLORS = [
 const MEM_LABEL = ['للحفظ؟','أحفظه','حفظته ✓'];
 const DEFAULT = {
   fontSize:19, fontFamily:FONTS['Readex Pro'], hlColor:HL_COLORS[0].val, hideAjz:false,
-  fav:{}, favV:{}, mem:{}, memV:{}, notes:{}, edits:{}, highs:[], bm:null, visited:{}, page:0
+  fav:{}, favV:{}, mem:{}, memV:{}, notes:{}, benefits:{}, edits:{}, highs:[],
+  bm:null, visited:{}, history:[], page:0
 };
 let state = load();
 function load(){
@@ -533,6 +549,7 @@ function shahidHtml(sh){
     else body += '<p class="prose-line">' + markText(ln, id) + '</p>';
   });
   const mem = state.mem[id] || 0, hasNote = !!(state.notes[id] || '').trim();
+  const hasBenefit = !!(state.benefits[id] || '').trim();
   return '<article class="card" data-id="' + escapeHtml(id) + '">' +
     '<div class="card-head"><div><span class="loc">📍 الموقع ' + arNum(sh.loc) + '</span> <span class="meta-txt">' +
       escapeHtml(sh.sec.includes('الجزء') ? sh.sec : sh.bab + ' · ' + sh.sec) + '</span></div>' +
@@ -546,6 +563,7 @@ function shahidHtml(sh){
       '<button class="btn btn-sm ' + memClass(mem) + '" data-act="mem" data-id="' + escapeHtml(id) + '">' + MEM_LABEL[mem] + '</button>' +
       '<button class="btn btn-sm" data-act="copy" data-id="' + escapeHtml(id) + '">📋 نسخ</button>' +
       '<button class="btn btn-sm ' + (hasNote ? 'btn-soft' : '') + '" data-act="note" data-id="' + escapeHtml(id) + '">📝 ' + (hasNote ? 'ملاحظتي ✓' : 'ملاحظة') + '</button>' +
+      '<button class="btn btn-sm ' + (hasBenefit ? 'btn-ok' : '') + '" data-act="benefit" data-id="' + escapeHtml(id) + '">✍️ ' + (hasBenefit ? 'فائدتي ✓' : 'أضف فائدة') + '</button>' +
       '<button class="btn btn-sm" data-act="edit" data-id="' + escapeHtml(id) + '">تصحيح النص</button>' +
     '</div>' +
     ((sh.tags && sh.tags.length) ? '<div class="tagrow">' + sh.tags.map(t =>
@@ -557,6 +575,9 @@ function shahidHtml(sh){
     '<div class="note-box" data-box="note" hidden>' +
       '<label><span>📝 ملاحظتي</span><button class="btn btn-sm btn-soft" data-act="saveNote" data-id="' + escapeHtml(id) + '">💾 حفظ</button></label>' +
       '<textarea class="notearea" data-id="' + escapeHtml(id) + '" placeholder="اكتب ملاحظتك هنا…">' + escapeHtml(state.notes[id] || '') + '</textarea></div>' +
+    '<div class="benefit-box" data-box="benefit" hidden>' +
+      '<label><span>✍️ الفائدة التي استخلصتها</span><button class="btn btn-sm btn-ok" data-act="saveBenefit" data-id="' + escapeHtml(id) + '">💾 حفظ</button></label>' +
+      '<textarea class="benefitarea" data-id="' + escapeHtml(id) + '" placeholder="ما الذي استفدتُه من هذا الشاهد؟…">' + escapeHtml(state.benefits[id] || '') + '</textarea></div>' +
   '</article>';
 }
 function safeCard(sh){
@@ -599,7 +620,24 @@ function renderRead(){
     escapeHtml(q.sec) + (q.label ? ' — ' + escapeHtml(q.label) : '') + '</option>').join('');
   $('#cards').innerHTML = p.items.map(safeCard).join('');
   $('#readBackBar').hidden = !readReturn;
+  renderHistory();
   state.visited[pageKey(p)] = true; save(); renderStats();
+}
+function markPosition(){
+  const sh = activePage().items[0];
+  if(!sh) return;
+  const entry = { loc:sh.loc, page:state.page, sid:sh.id, at:Date.now() };
+  state.history = (state.history || []).filter(h => h.page !== state.page);
+  state.history.unshift(entry);
+  state.history = state.history.slice(0, 5);
+  save(); renderHistory();
+}
+function renderHistory(){
+  const bar = $('#histBar'); if(!bar) return;
+  const h = state.history || [];
+  bar.hidden = h.length === 0;
+  bar.innerHTML = '<span class="lbl">آخر المواضع:</span>' + h.map((x, i) =>
+    '<button class="hist" data-hist="' + i + '" title="الانتقال إلى الموقع ' + arNum(x.loc) + '">📍 ' + arNum(x.loc) + '</button>').join('');
 }
 function stats(){
   return {
@@ -607,6 +645,7 @@ function stats(){
     mem:Object.keys(state.mem).filter(k => state.mem[k] === 2).length + Object.keys(state.memV).filter(k => state.memV[k] === 2).length,
     fav:Object.keys(state.fav).length + Object.keys(state.favV).length,
     notes:Object.keys(state.notes).filter(k => (state.notes[k]||'').trim()).length,
+    benefits:Object.keys(state.benefits || {}).filter(k => (state.benefits[k]||'').trim()).length,
     hl:(state.highs||[]).length,
     edits:Object.keys(state.edits).length
   };
@@ -616,16 +655,17 @@ function renderStats(){
   $('#stats').innerHTML =
     '<span>📄 مقروءة <strong>' + s.pages + '</strong></span><span>🎓 محفوظ <strong>' + s.mem + '</strong></span>' +
     '<span>★ مفضلة <strong>' + s.fav + '</strong></span><span>📝 ملاحظات <strong>' + s.notes + '</strong></span>' +
-    '<span>🖍 تظليلات <strong>' + s.hl + '</strong></span>' +
+    '<span>✍️ فوائد <strong>' + s.benefits + '</strong></span><span>🖍 تظليلات <strong>' + s.hl + '</strong></span>' +
     '<span>📍 الموقع <strong>' + arNum((activePage().items[0] || {}).loc || 1) + '/' + arNum(BOOK.length) + '</strong></span>';
   $('#setStats').innerHTML =
     '<div><span>شاهد</span><b>' + BOOK.length + '</b></div><div><span>صفحة</span><b>' + PAGES.length + '</b></div>' +
     '<div><span>مقروءة</span><b>' + s.pages + '</b></div><div><span>محفوظ</span><b>' + s.mem + '</b></div>' +
     '<div><span>مفضلة</span><b>' + s.fav + '</b></div><div><span>ملاحظات</span><b>' + s.notes + '</b></div>' +
+    '<div><span>فوائد</span><b>' + s.benefits + '</b></div>' +
     '<div><span>تظليلات</span><b>' + s.hl + '</b></div><div><span>تعديلات</span><b>' + s.edits + '</b></div>';
 }
 function gotoPage(i, sid){
-  state.page = i; save(); renderRead();
+  state.page = i; save(); renderRead(); markPosition();
   if(sid){ const el = $('#cards .card[data-id="' + sid + '"]'); if(el) el.scrollIntoView({block:'center', behavior:'smooth'}); }
   window.scrollTo({top:0, behavior:'smooth'});
 }
@@ -670,6 +710,11 @@ $('#cards').addEventListener('click', e => {
     }
     else if(act === 'note' && id){ const card = btn.closest('.card'); const box = card.querySelector('[data-box="note"]'); box.hidden = !box.hidden; return; }
     else if(act === 'saveNote' && id){ state.notes[id] = btn.closest('.card').querySelector('.notearea').value; save(); toast('تم حفظ الملاحظة'); renderRead(); return; }
+    else if(act === 'benefit' && id){ const box = btn.closest('.card').querySelector('[data-box="benefit"]'); box.hidden = !box.hidden; return; }
+    else if(act === 'saveBenefit' && id){
+      state.benefits[id] = btn.closest('.card').querySelector('.benefitarea').value;
+      save(); toast('تم حفظ الفائدة'); renderRead(); return;
+    }
     else if(act === 'edit' && id){ const card = btn.closest('.card'); card.querySelector('.shahid-body').hidden = true; card.querySelector('.card-foot').hidden = true; card.querySelector('[data-box="edit"]').hidden = false; return; }
     else if(act === 'saveEdit' && id){ state.edits[id] = btn.closest('.card').querySelector('.edarea').value; save(); toast('تم حفظ التعديل'); renderRead(); return; }
     else if(act === 'cancelEdit'){ renderRead(); return; }
@@ -679,7 +724,10 @@ $('#cards').addEventListener('click', e => {
   const ajz = e.target.closest('.ajz-veiled'); if(ajz){ ajz.classList.add('revealed'); return; }
   const mk = e.target.closest('mark[data-hid]'); if(mk) openHighlight(mk.dataset.hid);
 });
-$('#cards').addEventListener('input', e => { if(e.target.classList.contains('notearea')){ state.notes[e.target.dataset.id] = e.target.value; save(); } });
+$('#cards').addEventListener('input', e => {
+  if(e.target.classList.contains('notearea')){ state.notes[e.target.dataset.id] = e.target.value; save(); }
+  if(e.target.classList.contains('benefitarea')){ state.benefits[e.target.dataset.id] = e.target.value; save(); }
+});
 function copyText(t){
   if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(()=>toast('تم النسخ'), ()=>fallbackCopy(t));
   else fallbackCopy(t);
@@ -824,7 +872,7 @@ function returnToRead(){
   readReturn = null;
   $('#returnBar').hidden = true;
   state.page = r.page; save();
-  renderRead();          // setTab() does not re-render the Reading tab
+  renderRead(); markPosition();   // setTab() does not re-render the Reading tab
   setTab('read');
   // restore the EXACT scroll offset, not the top of a card: the reader may
   // have been anywhere inside a long card when they left it.
@@ -965,6 +1013,11 @@ $('#secStrip').addEventListener('click', e => {
   const p = pagesOfTopic(b.dataset.topic)[0]; if(p) gotoPage(PAGES.indexOf(p));
 });
 $('#spSelect').addEventListener('change', e => gotoPage(parseInt(e.target.value, 10)));
+$('#histBar').addEventListener('click', e => {
+  const b = e.target.closest('[data-hist]'); if(!b) return;
+  const h = state.history[parseInt(b.dataset.hist, 10)]; if(!h) return;
+  gotoPage(h.page, h.sid);
+});
 function stepPage(d){ const t = state.page + d; if(t >= 0 && t < PAGES.length) gotoPage(t); window.scrollTo({top:0}); }
 ['prevBtn','prevBtnBottom'].forEach(id => $('#'+id).addEventListener('click', () => stepPage(-1)));
 ['nextBtn','nextBtnBottom'].forEach(id => $('#'+id).addEventListener('click', () => stepPage(1)));
