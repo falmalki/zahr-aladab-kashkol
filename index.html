@@ -1355,37 +1355,32 @@ $('#expEpub').addEventListener('click', () => {
   const add = (name, text) => files.push({name, data:enc.encode(text)});
   add('mimetype', 'application/epub+zip');
   add('META-INF/container.xml', '<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>');
+  // minimal styling only: the reading app supplies the visual design
   const css = [
-    ':root{--bg:#fbf7ef;--card:#fffdf8;--ink:#2c241b;--muted:#6e6154;--accent:#8a5a2b;',
-    '--accent-soft:#f2e6d5;--border:#e6dccb;--ok:#2e6b47;--ok-soft:#e6f3eb;',
-    '--poem-bg:#faf4e8;--poem-border:#eadec9;--chip:#f3ebdd;--hl:#fde68a}',
-    'body{background:var(--bg);color:var(--ink);font-family:"Readex Pro",serif;line-height:1.85;margin:0;padding:12px}',
-    'h1{color:var(--accent);font-size:1.6em;margin:0 0 14px;border-bottom:2px solid var(--accent);padding-bottom:6px}',
-    'h2{color:var(--accent);font-size:1.05em;margin:18px 0 8px;padding:6px 10px;background:var(--accent-soft);border-radius:9px}',
-    '.shahid{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;margin:0 0 14px;box-shadow:0 2px 8px rgba(44,36,27,.04);page-break-inside:avoid}',
-    '.card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.78em;color:var(--muted);border-bottom:1px dashed var(--border);padding-bottom:7px;margin-bottom:9px}',
-    '.loc{color:var(--accent);background:var(--accent-soft);border:1px solid #dfcbb0;border-radius:8px;padding:2px 9px;font-weight:700;white-space:nowrap}',
-    '.badge{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:1px 8px;font-size:.85em;margin-left:4px}',
-    '.badge-partial{background:#fbeccd;border:1px solid #e2c893}',
-    '.shahid-body{font-size:1em;line-height:1.95}',
-    '.prose-line{margin:0 0 9px;text-align:justify}',
-    '.poem-box{background:var(--poem-bg);border:1px solid var(--poem-border);border-radius:12px;padding:12px 14px;margin:10px 0 14px}',
-    '.verse-row{display:flex;flex-direction:column;padding:5px 0}',
-    '.verse-row + .verse-row{border-top:1px dashed var(--poem-border)}',
-    '.verse-sadr,.verse-ajz{display:block;width:100%;text-align:right;line-height:1.95}',
-    '.verse-ajz{color:var(--accent)}',
-    '.benefit-inline{background:var(--ok-soft);border-right:3px solid var(--ok);border-radius:8px;padding:8px 10px;margin-top:10px;color:var(--ok);font-size:.92em}',
-    '.tagrow{margin-top:8px}',
-    '.tag{display:inline-block;background:var(--chip);color:var(--accent);border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:.75em;margin:2px 3px 0 0}',
-    '.mark{background:var(--hl);padding:1px 3px;border-radius:4px}',
-    '.mark-note{border-bottom:2px solid var(--accent)}',
-    '.hl-note{font-size:.8em;color:var(--muted);margin-top:3px}',
-    '.fullref{font-size:.8em;color:var(--accent);margin-top:6px}',
-    '.meta-foot{font-size:.75em;color:var(--muted);text-align:center;margin-top:24px}'
+    'body{font-family:serif;line-height:1.8;margin:0;padding:8px}',
+    'h1{font-size:1.4em;margin:0 0 12px}',
+    'h2{font-size:1.05em;margin:18px 0 8px}',
+    'h3{font-size:.95em;margin:10px 0 4px}',
+    '.shahid{margin:0 0 12px;padding-bottom:10px;border-bottom:1px solid #ccc;page-break-inside:avoid}',
+    '.loc{font-size:.8em;color:#8a5a2b}',
+    '.prose{margin:.35em 0;text-align:right}',
+    '.verse{margin:.3em 0}',
+    '.sadr,.ajz{display:block;width:100%;text-align:right}',
+    '.ajz{color:#8a5a2b}',
+    '.benefit{margin-top:6px;color:#2e6b47}',
+    '.tags{font-size:.8em;color:#6e6154;margin-top:4px}',
+    '.note{font-size:.8em;color:#6e6154;margin-top:4px}',
+    'mark{background:#fde68a}',
+    'a{color:#8a5a2b}'
   ].join('');
 
   add('OEBPS/style.css', css);
   const chapFiles = TOPICS.map((t, i) => 'chapter_' + String(i).padStart(3,'0') + '.xhtml');
+  const partChapter = {};
+  BOOK.forEach(sh => {
+    const m = String(sh.bab).match(/(\d+)/);
+    if(m) partChapter[m[1]] = chapFiles[TOPICS.indexOf(sh.topic)];
+  });
   const manifest = ['<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>',
     '<item id="css" href="style.css" media-type="text/css"/>']
     .concat(chapFiles.map((f,i) => '<item id="c' + i + '" href="' + f + '" media-type="application/xhtml+xml"/>')).join('');
@@ -1406,36 +1401,53 @@ $('#expEpub').addEventListener('click', () => {
     let body = '<h1>' + xesc(t) + '</h1>';
     let lastSec = '';
     BOOK.filter(x => x.topic === t).forEach(sh => {
-      if(sh.sec !== lastSec){ body += '<h2>' + xesc(sh.sec) + '</h2>'; lastSec = sh.sec; }
-      body += '<div class="shahid"><div class="card-head"><span>' + xesc(sh.bab) + '</span>' +
-        '<span class="loc">📍 الموقع ' + sh.loc + '</span></div><div class="shahid-body">';
+      const pm = String(sh.bab).match(/(\d+)/);
+      if(sh.sec !== lastSec){
+        body += '<h2' + (pm ? ' id="p' + pm[1] + '"' : '') + '>' + xesc(sh.sec) + '</h2>';
+        lastSec = sh.sec;
+      }
+      body += '<div class="shahid" id="loc-' + sh.loc + '"><div class="loc">الموقع ' + sh.loc +
+        ' · ' + xesc(sh.bab) + '</div>';
       let verseOpen = false;
       shahidText(sh).split('\n').forEach(ln => {
         const p = parse(ln);
         if(p){
-          if(!verseOpen){ body += '<div class="poem-box">'; verseOpen = true; }
-          body += '<div class="verse-row"><span class="verse-sadr">' + epubMark(p.sadr, sh.id) + '</span>' +
-            '<span class="verse-ajz">' + epubMark(p.ajz, sh.id) + '</span></div>';
+          if(!verseOpen){ body += '<div class="verse">'; verseOpen = true; }
+          body += '<div class="verse-row"><span class="sadr">' + epubMark(p.sadr, sh.id) + '</span>' +
+            '<span class="ajz">' + epubMark(p.ajz, sh.id) + '</span></div>';
         } else {
           if(verseOpen){ body += '</div>'; verseOpen = false; }
-          body += '<p class="prose-line">' + epubMark(ln, sh.id) + '</p>';
+          body += '<p class="prose">' + epubMark(ln, sh.id) + '</p>';
         }
       });
       if(verseOpen) body += '</div>';
-      body += '</div>';
-      if(sh.partial) body += '<span class="badge badge-partial">شطر</span>';
+      if(sh.partial) body += '<div class="note">شطر</div>';
       if(sh.partialRef){
         const target = byId(sh.partialRef.sid);
-        if(target) body += '<div class="fullref">البيت الكامل في الموقع ' + target.loc + '</div>';
+        if(target) body += '<div class="note">البيت الكامل في الموقع ' + target.loc + '</div>';
       }
       const ben = (state.benefits || {})[sh.id];
-      if(ben && ben.trim()) body += '<div class="benefit-inline">✍️ ' + xesc(ben) + '</div>';
-      if(sh.tags && sh.tags.length) body += '<div class="tagrow">' + sh.tags.map(g => '<span class="tag">#' + xesc(g) + '</span>').join('') + '</div>';
+      if(ben && ben.trim()) body += '<div class="benefit">الفائدة: ' + xesc(ben) + '</div>';
+      if(sh.tags && sh.tags.length) body += '<div class="tags">الوسوم: ' + sh.tags.map(xesc).join('، ') + '</div>';
       epubHighlights.filter(h => h.sid === sh.id && h.note).forEach(h =>
-        body += '<div class="hl-note">🖍 ' + xesc(h.text) + ' — ' + xesc(h.note) + '</div>');
+        body += '<div class="note">تظليل: ' + xesc(h.text) + ' — ' + xesc(h.note) + '</div>');
       body += '</div>';
     });
-    body += '<div class="meta-foot">زهر الآداب وثمر الألباب · ' + BOOK.length + ' شاهداً · تصدير كشكول رقمي</div>';
+    // the source index becomes a real linked table of contents
+    if(t === 'الفهرس'){
+      const tocItems = [];
+      BOOK.filter(x => x.topic === 'الفهرس').forEach(sh => {
+        shahidText(sh).split('\n').forEach(ln => {
+          const m = ln.match(/^\s*(\d+)\s*-\s*(.*)$/);
+          if(!m) return;
+          const file = partChapter[m[1]];
+          tocItems.push('<li>' + (file
+            ? '<a href="' + file + '#p' + m[1] + '">' + xesc(m[2]) + '</a>'
+            : xesc(m[2])) + '</li>');
+        });
+      });
+      body = '<h1>الفهرس</h1><ol>' + tocItems.join('') + '</ol>';
+    }
     add('OEBPS/' + chapFiles[i], '<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml" dir="rtl" lang="ar"><head><title>' + xesc(t) + '</title><link rel="stylesheet" type="text/css" href="style.css"/></head><body>' + body + '</body></html>');
   });
   const blob = makeZip(files);
