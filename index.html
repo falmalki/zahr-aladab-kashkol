@@ -1399,7 +1399,7 @@ $('#expEpub').addEventListener('click', () => {
     '.shahid{margin:0 0 12px;padding-bottom:10px;page-break-inside:avoid}',
     'hr{border:0;border-top:1px solid #ccc;margin:12px 0}',
     '.loc{font-size:.8em;color:#8a5a2b}',
-    '.prose{margin:.35em 0;text-align:justify}',
+    'p.prose,div.prose{margin:.35em 0;text-align:justify !important;text-align-last:right !important}',
     '.verse{margin:.3em 0}',
     '.sadr,.ajz{display:block;width:100%;text-align:right}',
     '.ajz{color:#8a5a2b}',
@@ -1411,7 +1411,7 @@ $('#expEpub').addEventListener('click', () => {
   ].join('');
 
   add('OEBPS/style.css', css);
-  const orderedTopics = ['الفهرس'].concat(TOPICS.filter(t => t !== 'الفهرس'));
+  const orderedTopics = TOPICS;
   const chapFiles = orderedTopics.map((t, i) => 'chapter_' + String(i).padStart(3,'0') + '.xhtml');
   const partChapter = {};
   BOOK.forEach(sh => {
@@ -1438,7 +1438,7 @@ $('#expEpub').addEventListener('click', () => {
   });
   add('OEBPS/nav.xhtml', '<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml" dir="rtl" lang="ar"><head><title>المحتويات</title><link rel="stylesheet" type="text/css" href="style.css"/></head><body><h1>المحتويات</h1><ol>' +
     orderedTopics.map((t,i) => '<li><a href="' + chapFiles[i] + '">' + xesc(t) + '</a>' +
-      (topicSections[i] ? '<ul>' + topicSections[i] + '</ul>' : '') + '</li>').join('') + '</ol></body></html>');
+      (topicSections[i] ? '<ol>' + topicSections[i] + '</ol>' : '') + '</li>').join('') + '</ol></body></html>');
   const epubHighlights = state.highs || [];
   const epubMark = (text, sid) => {
     let out = xesc(text);
@@ -1464,12 +1464,12 @@ $('#expEpub').addEventListener('click', () => {
         const p = parse(ln);
         if(p){
           if(!verseOpen){ body += '<div class="verse">'; verseOpen = true; }
-          body += '<div class="verse-row" style="direction:rtl;text-align:right">' +
-            '<span class="sadr" style="display:block;width:100%;text-align:right;direction:rtl">' + epubMark(p.sadr, sh.id) + '</span>' +
-            '<span class="ajz" style="display:block;width:100%;text-align:right;direction:rtl">' + epubMark(p.ajz, sh.id) + '</span></div>';
+          body += '<div class="verse-row" dir="rtl" style="direction:rtl;text-align:right;width:100%;margin:.4em 0">' +
+            '<div class="sadr" dir="rtl" style="text-align:right !important;width:100%;margin:0 0 .2em">' + epubMark(p.sadr, sh.id) + '</div>' +
+            '<div class="ajz" dir="rtl" style="text-align:right !important;width:100%;margin:0">' + epubMark(p.ajz, sh.id) + '</div></div>';
         } else {
           if(verseOpen){ body += '</div>'; verseOpen = false; }
-          body += '<p class="prose" dir="rtl" style="text-align:justify;text-align-last:right">' + epubMark(ln, sh.id) + '</p>';
+          body += '<div class="prose" dir="rtl" style="text-align:justify !important;text-align-last:right !important;width:100%">' + epubMark(ln, sh.id) + '</div>';
         }
       });
       if(verseOpen) body += '</div>';
