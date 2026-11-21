@@ -123,6 +123,12 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:calc(74px + env(safe-ar
   border-radius:999px;padding:2px 8px;cursor:pointer;white-space:nowrap;
 }
 .hist:hover{background:var(--accent);color:#fff}
+.toc{display:flex;flex-direction:column;gap:1px}
+.toc-item{
+  text-align:right;background:none;border:0;border-bottom:1px dashed var(--line);
+  padding:4px 2px;cursor:pointer;color:var(--ink);font-family:inherit;font-size:.92em;
+}
+.toc-item:hover{color:var(--accent);background:var(--chip)}
 .benefit-box{margin-top:8px;background:var(--note-bg);border-radius:12px;padding:10px}
 .benefit-box label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:5px}
 body.focus-mode .card-foot,body.focus-mode .tagrow,body.focus-mode .badge,
@@ -583,6 +589,13 @@ function poemHtml(group, sid, gi){
       '<button class="btn btn-sm ' + memClass(state.memV[key] || 0) + '" data-act="memV" data-key="' + escapeHtml(key) + '">' + MEM_LABEL[state.memV[key] || 0] + '</button>' +
     '</div></div>';
 }
+function fihristHtml(sh){
+  return '<div class="toc">' + shahidText(sh).split('\n').map(ln => {
+    const m = ln.match(/^\s*(\d+)\s*-\s*(.*)$/);
+    if(!m) return '<p class="prose-line">' + escapeHtml(ln) + '</p>';
+    return '<button class="toc-item" data-act="toc" data-n="' + m[1] + '">' + escapeHtml(ln) + '</button>';
+  }).join('') + '</div>';
+}
 function relatedHtml(sh){
   const same = BOOK.filter(x => x.id !== sh.id &&
     (x.sec === sh.sec || (sh.tags || []).some(t => (x.tags || []).indexOf(t) >= 0))).slice(0, 3);
@@ -610,7 +623,7 @@ function shahidHtml(sh){
       (sh.partialRef ? '<button class="badge badge-ref" data-act="partialRef" data-ref-sid="' + escapeHtml(sh.partialRef.sid) +
         '" data-gi="' + sh.partialRef.gi + '" data-vi="' + sh.partialRef.vi + '" title="الانتقال إلى البيت الكامل">البيت كامل ↗</button>' : '') +
       '<span class="loc">📍 الموقع ' + arNum(sh.loc) + '</span>' + '</div></div>' +
-    '<div class="shahid-body">' + body + '</div>' +
+    '<div class="shahid-body">' + (sh.topic === 'الفهرس' ? fihristHtml(sh) : body) + '</div>' +
     '<div class="card-foot">' +
       '<button class="btn btn-sm ' + (state.fav[id] ? 'btn-soft' : '') + '" data-act="fav" data-id="' + escapeHtml(id) + '">' + (state.fav[id] ? '★ في المختارات' : '☆ أضف للمختارات') + '</button>' +
       '<button class="btn btn-sm ' + memClass(mem) + '" data-act="mem" data-id="' + escapeHtml(id) + '">' + MEM_LABEL[mem] + '</button>' +
@@ -703,13 +716,13 @@ function renderStats(){
   const s = stats();
   $('#stats').innerHTML =
     '<span>📄 مقروءة <strong>' + s.pages + '</strong></span><span>🎓 محفوظ <strong>' + s.mem + '</strong></span>' +
-    '<span>★ مفضلة <strong>' + s.fav + '</strong></span><span>📝 ملاحظات <strong>' + s.notes + '</strong></span>' +
+    '<span>★ مفضلة <strong>' + s.fav + '</strong></span>' +
     '<span>✍️ فوائد <strong>' + s.benefits + '</strong></span><span>🖍 تظليلات <strong>' + s.hl + '</strong></span>' +
     '<span>📍 الموقع <strong>' + arNum((activePage().items[0] || {}).loc || 1) + '/' + arNum(BOOK.length) + '</strong></span>';
   $('#setStats').innerHTML =
     '<div><span>شاهد</span><b>' + BOOK.length + '</b></div><div><span>صفحة</span><b>' + PAGES.length + '</b></div>' +
     '<div><span>مقروءة</span><b>' + s.pages + '</b></div><div><span>محفوظ</span><b>' + s.mem + '</b></div>' +
-    '<div><span>مفضلة</span><b>' + s.fav + '</b></div><div><span>ملاحظات</span><b>' + s.notes + '</b></div>' +
+    '<div><span>مفضلة</span><b>' + s.fav + '</b></div>' +
     '<div><span>فوائد</span><b>' + s.benefits + '</b></div>' +
     '<div><span>تظليلات</span><b>' + s.hl + '</b></div><div><span>تعديلات</span><b>' + s.edits + '</b></div>';
 }
@@ -748,6 +761,12 @@ $('#cards').addEventListener('click', e => {
     else if(act === 'memV' && key){ state.memV[key] = ((state.memV[key]||0)+1)%3; if(!state.memV[key]) delete state.memV[key]; }
     else if(act === 'copy' && id){ copyShahid(id); return; }
     else if(act === 'copyV' && key){ copyPoem(key); return; }
+    else if(act === 'toc' && btn.dataset.n){
+      const n = btn.dataset.n;
+      const target = BOOK.find(x => x.id.indexOf('b' + n + '-') === 0);
+      if(target) gotoShahid(target.id); else toast('لا يوجد موقع لهذا الباب في النسخة الحالية');
+      return;
+    }
     else if(act === 'related' && btn.dataset.sid){ gotoShahid(btn.dataset.sid); return; }
     else if(act === 'partialRef' && btn.dataset.refSid){
       jumpToVerse(btn.dataset.refSid, parseInt(btn.dataset.gi, 10), parseInt(btn.dataset.vi, 10)); return;
