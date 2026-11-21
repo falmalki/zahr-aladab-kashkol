@@ -1475,13 +1475,13 @@ $('#expEpub').addEventListener('click', () => {
         if(p){
           if(!verseOpen){ body += sep() + '<div class="verse">'; verseOpen = true; }
           const FONT = "font-family:'Amariya',serif !important;font-weight:700 !important;";
-          body += '<div class="verse-row" dir="rtl" style="direction:rtl;text-align:right;width:100%;margin:.4em 0;' + FONT + '">' +
-            '<div class="sadr" dir="rtl" style="text-align:right !important;width:100%;margin:0 0 .2em;' + FONT + '">' + epubMark(p.sadr, sh.id) + '</div>' +
-            '<div class="ajz" dir="rtl" style="text-align:right !important;width:100%;margin:0;' + FONT + '">' + epubMark(p.ajz, sh.id) + '</div></div>';
+          body += '<div class="verse-row" dir="rtl" align="right" style="direction:rtl;text-align:right;width:100%;margin:.4em 0;' + FONT + '">' +
+            '<p class="sadr" dir="rtl" align="right" style="text-align:right !important;width:100%;margin:0 0 .2em;' + FONT + '">' + epubMark(p.sadr, sh.id) + '</p>' +
+            '<p class="ajz" dir="rtl" align="right" style="text-align:right !important;width:100%;margin:0;' + FONT + '">' + epubMark(p.ajz, sh.id) + '</p></div>';
         } else {
           if(verseOpen){ body += '</div>' + GAP; verseOpen = false; }
           wroteBlock = true;
-          body += '<div class="prose" dir="rtl" style="text-align:justify !important;text-align-last:right !important;width:100%;font-family:\'Amariya\',serif !important;font-weight:700 !important">' + epubMark(ln, sh.id) + '</div>';
+          body += '<p class="prose" dir="rtl" align="right" style="text-align:justify !important;text-align-last:right !important;width:100%;font-family:\'Amariya\',serif !important;font-weight:700 !important">' + epubMark(ln, sh.id) + '</p>';
         }
       });
       if(verseOpen) body += '</div>';
@@ -1515,7 +1515,7 @@ $('#expEpub').addEventListener('click', () => {
   });
   const blob = makeZip(files);
   const url = URL.createObjectURL(blob), a = document.createElement('a');
-  a.href = url; a.download = 'zahr-aladab-' + todayKey() + '.epub';
+  a.href = url; a.download = 'zahr-aladab-v30-' + todayKey() + '.epub';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 2000);
   toast('تم تصدير EPUB كاملاً (' + BOOK.length + ' شاهداً)');
