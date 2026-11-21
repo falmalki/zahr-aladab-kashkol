@@ -1481,7 +1481,9 @@ $('#expEpub').addEventListener('click', () => {
         } else {
           if(verseOpen){ body += '</div>' + GAP; verseOpen = false; }
           wroteBlock = true;
-          body += '<p class="prose" dir="rtl" align="right" style="text-align:justify !important;text-align-last:right !important;width:100%;font-family:\'Amariya\',serif !important;font-weight:700 !important">' + epubMark(ln, sh.id) + '</p>';
+          const shortLine = ln.length < 48;
+          const align = shortLine ? 'right' : 'justify';
+          body += '<p class="prose" dir="rtl" align="right" style="text-align:' + align + ' !important;text-align-last:right !important;width:100%;font-family:\'Amariya\',serif !important;font-weight:700 !important">' + epubMark(ln, sh.id) + '</p>';
         }
       });
       if(verseOpen) body += '</div>';
