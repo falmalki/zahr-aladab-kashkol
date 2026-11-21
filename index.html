@@ -141,15 +141,21 @@ body.focus-mode .related,body.focus-mode .card-head .meta-txt{display:none}
 body.focus-mode .card-head{justify-content:flex-start}
 .focus-exit{position:fixed;left:12px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:56;display:none}
 body.focus-mode .focus-exit{display:block}
-.kanban{display:flex;gap:5px;overflow-x:auto;padding:4px 0;scrollbar-width:none}
+.kanban{display:flex;gap:6px;overflow-x:auto;padding:4px 0;scrollbar-width:none}
 .kanban::-webkit-scrollbar{display:none}
-.kanban .kb{
-  flex:0 0 auto;width:116px;text-align:right;border:1px solid var(--border);border-radius:8px;
-  padding:6px 7px;background:var(--chip);font-size:11px;cursor:pointer;color:var(--ink);
+.kb-col{flex:0 0 128px;min-width:128px;background:var(--chip);border-radius:9px;padding:6px}
+.kb-col.now-col{background:var(--accent-soft)}
+.kb-col.read-col{background:var(--ok-soft)}
+.kb-col h4{margin:0 0 5px;font-size:10px;font-weight:600;color:var(--muted)}
+.kb-col.now-col h4{color:var(--accent)}
+.kb-col.read-col h4{color:var(--ok)}
+.kb-card{
+  display:block;width:100%;text-align:right;border:1px solid var(--border);background:var(--card);
+  border-radius:7px;padding:5px 6px;margin:0 0 4px;cursor:pointer;font-family:inherit;font-size:11px;color:var(--ink);
 }
-.kanban .kb-t{display:block;line-height:1.35;max-height:2.7em;overflow:hidden;font-family:var(--reader-font)}
-.kanban .kb-l{display:block;color:var(--muted);font-size:.78em;margin-top:3px}
-.kanban .kb.read .kb-l{color:var(--ok)}
+.kb-card .kb-t{display:block;line-height:1.35;max-height:2.7em;overflow:hidden;font-family:var(--reader-font)}
+.kb-card .kb-l{display:block;color:var(--muted);font-size:.78em;margin-top:2px}
+.kb-empty{font-size:10px;color:var(--muted);padding:4px 0}
 .kanban .kb.read{background:var(--ok-soft);border-color:#b7dec6;color:var(--ok)}
 .kanban .kb.now{background:var(--accent-soft);border-color:#dfcbb0;color:var(--accent)}
 .path-progress{height:5px;background:var(--chip);border-radius:99px;margin:6px 0 4px;overflow:hidden}
@@ -942,10 +948,17 @@ function renderPaths(){
       return '<div class="card"><div class="card-head"><span>' + escapeHtml(p.t) + (done ? ' ✅' : '') +
         '</span><span>' + read + '/' + cards.length + '</span></div>' +
         '<div class="path-progress"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="kanban">' + cards.map(x =>
-          '<button class="kb' + (state.readCards[x.id] ? ' read' : '') + '" data-goto="' + escapeHtml(x.id) + '">' +
-          '<span class="kb-t">' + escapeHtml(cardTeaser(x)) + '</span>' +
-          '<span class="kb-l">📍 ' + arNum(x.loc) + (state.readCards[x.id] ? ' ✓' : '') + '</span></button>').join('') + '</div>' +
+        '<div class="kanban">' + (function(){
+          const rd = cards.filter(x => state.readCards[x.id]);
+          const un = cards.filter(x => !state.readCards[x.id]);
+          const now = un[0], todo = un.slice(1);
+          const mkCard = x => '<button class="kb-card" data-goto="' + escapeHtml(x.id) + '">' +
+            '<span class="kb-t">' + escapeHtml(cardTeaser(x)) + '</span>' +
+            '<span class="kb-l">📍 ' + arNum(x.loc) + '</span></button>';
+          const col = (label, arr, cls) => '<div class="kb-col ' + cls + '"><h4>' + label + ' (' + arr.length + ')</h4>' +
+            (arr.length ? arr.map(mkCard).join('') : '<div class="kb-empty">—</div>') + '</div>';
+          return col('لم تُقرأ', todo, '') + col('قيد القراءة', now ? [now] : [], 'now-col') + col('مقروءة', rd, 'read-col');
+        })() + '</div>' +
         '<button class="btn btn-sm btn-soft" data-path="' + i + '">عرض كل البطاقات ←</button></div>';
     }).join('');
   }
