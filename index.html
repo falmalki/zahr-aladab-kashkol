@@ -873,11 +873,20 @@ document.addEventListener('selectionchange', () => {
 });
 $('#hlFloatBtn').addEventListener('click', () => {
   if(!pendingSel) return;
-  editingHid = null;
-  $('#hlQuote').textContent = '«' + pendingSel.text + '»';
-  $('#hlNote').value = ''; $('#hlDelete').style.display = 'none';
-  $('#hlModal').style.display = 'flex'; $('#hlFloatBtn').style.display = 'none';
+  const dup = (state.highs || []).some(h => h.sid === pendingSel.sid && h.text === pendingSel.text);
+  $('#hlFloatBtn').style.display = 'none';
   window.getSelection().removeAllRanges();
+  if(dup){ pendingSel = null; toast('هذا النص مظلّل بالفعل'); return; }
+  const y = window.scrollY;
+  state.highs.push({
+    id: 'h' + Date.now() + Math.floor(Math.random() * 1000),
+    sid: pendingSel.sid, text: pendingSel.text, note: '', color: state.hlColor
+  });
+  pendingSel = null;
+  save();
+  renderAll();
+  window.scrollTo({ top:y, behavior:'instant' });
+  toast('تم تظليل النص · اضغط على التظليل لإضافة ملاحظة');
 });
 function openHighlight(hid){
   const h = (state.highs||[]).find(x => x.id === hid); if(!h) return;
