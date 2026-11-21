@@ -129,6 +129,11 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:calc(74px + env(safe-ar
   padding:4px 2px;cursor:pointer;color:var(--ink);font-family:inherit;font-size:.92em;
 }
 .toc-item:hover{color:var(--accent);background:var(--chip)}
+.benefit-inline{
+  margin:8px 0;padding:7px 10px;background:var(--ok-soft);border-right:3px solid var(--ok);
+  border-radius:8px;font-size:.9em;color:var(--ok);line-height:1.7;
+}
+body.focus-mode .benefit-inline{display:block}
 .benefit-box{margin-top:8px;background:var(--note-bg);border-radius:12px;padding:10px}
 .benefit-box label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:5px}
 body.focus-mode .card-foot,body.focus-mode .tagrow,body.focus-mode .badge,
@@ -136,6 +141,16 @@ body.focus-mode .related,body.focus-mode .card-head .meta-txt{display:none}
 body.focus-mode .card-head{justify-content:flex-start}
 .focus-exit{position:fixed;left:12px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:56;display:none}
 body.focus-mode .focus-exit{display:block}
+.kanban{display:flex;gap:5px;overflow-x:auto;padding:4px 0;scrollbar-width:none}
+.kanban::-webkit-scrollbar{display:none}
+.kanban .kb{
+  flex:0 0 auto;min-width:64px;text-align:center;border:1px solid var(--border);border-radius:8px;
+  padding:5px 6px;background:var(--chip);font-size:11px;cursor:pointer;color:var(--muted);
+}
+.kanban .kb.read{background:var(--ok-soft);border-color:#b7dec6;color:var(--ok)}
+.kanban .kb.now{background:var(--accent-soft);border-color:#dfcbb0;color:var(--accent)}
+.path-progress{height:5px;background:var(--chip);border-radius:99px;margin:6px 0 4px;overflow:hidden}
+.path-progress i{display:block;height:100%;background:var(--accent);border-radius:99px}
 .related{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
 .related .lbl{font-size:11px;color:var(--muted)}
 .related .btn{margin:2px 3px 0 0;font-size:11px;padding:2px 7px}
@@ -473,7 +488,7 @@ const MEM_LABEL = ['للحفظ؟','أحفظه','حفظته ✓'];
 const DEFAULT = {
   fontSize:19, fontFamily:FONTS['Readex Pro'], hlColor:HL_COLORS[0].val, hideAjz:false,
   fav:{}, favV:{}, mem:{}, memV:{}, benefits:{}, edits:{}, highs:[],
-  bm:null, visited:{}, history:[], page:0
+  bm:null, visited:{}, readCards:{}, history:[], page:0
 };
 let state = load();
 function mergeLegacyNotes(o){
@@ -624,6 +639,7 @@ function shahidHtml(sh){
         '" data-gi="' + sh.partialRef.gi + '" data-vi="' + sh.partialRef.vi + '" title="الانتقال إلى البيت الكامل">البيت كامل ↗</button>' : '') +
       '<span class="loc">📍 الموقع ' + arNum(sh.loc) + '</span>' + '</div></div>' +
     '<div class="shahid-body">' + (sh.topic === 'الفهرس' ? fihristHtml(sh) : body) + '</div>' +
+    (hasBenefit ? '<div class="benefit-inline">✍️ ' + escapeHtml(state.benefits[id]) + '</div>' : '') +
     '<div class="card-foot">' +
       '<button class="btn btn-sm ' + (state.fav[id] ? 'btn-soft' : '') + '" data-act="fav" data-id="' + escapeHtml(id) + '">' + (state.fav[id] ? '★ في المختارات' : '☆ أضف للمختارات') + '</button>' +
       '<button class="btn btn-sm ' + memClass(mem) + '" data-act="mem" data-id="' + escapeHtml(id) + '">' + MEM_LABEL[mem] + '</button>' +
@@ -684,7 +700,9 @@ function renderRead(){
   $('#cards').innerHTML = p.items.map(safeCard).join('');
   $('#readBackBar').hidden = !readReturn;
   renderHistory();
-  state.visited[pageKey(p)] = true; save(); renderStats();
+  state.visited[pageKey(p)] = true;
+  p.items.forEach(it => { state.readCards[it.id] = 1; });
+  save(); renderStats();
 }
 function markPosition(){
   const sh = activePage().items[0];
@@ -708,6 +726,7 @@ function stats(){
     mem:Object.keys(state.mem).filter(k => state.mem[k] === 2).length + Object.keys(state.memV).filter(k => state.memV[k] === 2).length,
     fav:Object.keys(state.fav).length + Object.keys(state.favV).length,
     benefits:Object.keys(state.benefits || {}).filter(k => (state.benefits[k]||'').trim()).length,
+    pathsDone:READING_PATHS.filter(pathDone).length,
     hl:(state.highs||[]).length,
     edits:Object.keys(state.edits).length
   };
@@ -717,7 +736,8 @@ function renderStats(){
   $('#stats').innerHTML =
     '<span>📄 مقروءة <strong>' + s.pages + '</strong></span><span>🎓 محفوظ <strong>' + s.mem + '</strong></span>' +
     '<span>★ مفضلة <strong>' + s.fav + '</strong></span>' +
-    '<span>✍️ فوائد <strong>' + s.benefits + '</strong></span><span>🖍 تظليلات <strong>' + s.hl + '</strong></span>' +
+    '<span>✍️ فوائد <strong>' + s.benefits + '</strong></span><span>🛤 مسارات <strong>' + s.pathsDone + '/' + READING_PATHS.length + '</strong></span>' +
+    '<span>🖍 تظليلات <strong>' + s.hl + '</strong></span>' +
     '<span>📍 الموقع <strong>' + arNum((activePage().items[0] || {}).loc || 1) + '/' + arNum(BOOK.length) + '</strong></span>';
   $('#setStats').innerHTML =
     '<div><span>شاهد</span><b>' + BOOK.length + '</b></div><div><span>صفحة</span><b>' + PAGES.length + '</b></div>' +
@@ -728,12 +748,17 @@ function renderStats(){
 }
 function gotoPage(i, sid){
   state.page = i; save(); renderRead(); markPosition();
-  if(sid){ const el = $('#cards .card[data-id="' + sid + '"]'); if(el) el.scrollIntoView({block:'center', behavior:'smooth'}); }
-  window.scrollTo({top:0, behavior:'smooth'});
+  if(sid){
+    const el = $('#cards .card[data-id="' + sid + '"]');
+    if(el) el.scrollIntoView({block:'center', behavior:'instant'});
+  } else {
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
 }
 function gotoShahid(id){
   const sh = byId(id); if(!sh) return;
-  gotoPage(PAGE_INDEX[pageKey(sh)], id); setTab('read');
+  setTab('read');                       // setTab scrolls to top — do it first
+  gotoPage(PAGE_INDEX[pageKey(sh)], id); // then scroll to the exact card
 }
 function jumpToVerse(sid, gi, vi){
   const sh = byId(sid); if(!sh) return;
@@ -884,13 +909,44 @@ function renderBenefitToday(){
       '<div>' + escapeHtml(state.benefits[id]) + '</div></div>';
   }).join('');
 }
-function renderPaths(){
-  $('#pathList').innerHTML = READING_PATHS.map((p, i) => {
-    const n = BOOK.filter(x => p.tags.some(t => (x.tags||[]).indexOf(t) >= 0)).length;
-    return '<div class="card"><div class="card-head"><span>' + escapeHtml(p.t) + '</span><span>' + n + ' بطاقة</span></div>' +
-      '<button class="btn btn-sm btn-soft" data-path="' + i + '">ابدأ المسار ←</button></div>';
-  }).join('');
+let showDonePaths = false;
+function pathCards(p){
+  return BOOK.filter(x => p.tags.some(t => (x.tags||[]).indexOf(t) >= 0)).slice(0, 5);
 }
+function pathDone(p){
+  const cards = pathCards(p);
+  return cards.length > 0 && cards.every(x => state.readCards[x.id]);
+}
+function renderPaths(){
+  const items = READING_PATHS.map((p, i) => ({p, i, done:pathDone(p)}));
+  const visible = items.filter(x => showDonePaths || !x.done);
+  const doneN = items.filter(x => x.done).length;
+  let html = '';
+  if(!visible.length){
+    html = '<div class="empty-msg">كل المسارات مكتملة. يمكنك إظهار المكتملة أدناه.</div>';
+  } else {
+    html = visible.map(({p, i, done}) => {
+      const cards = pathCards(p);
+      const read = cards.filter(x => state.readCards[x.id]).length;
+      const pct = Math.round(read / cards.length * 100);
+      return '<div class="card"><div class="card-head"><span>' + escapeHtml(p.t) + (done ? ' ✅' : '') +
+        '</span><span>' + read + '/' + cards.length + '</span></div>' +
+        '<div class="path-progress"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="kanban">' + cards.map(x =>
+          '<button class="kb' + (state.readCards[x.id] ? ' read' : '') + '" data-goto="' + escapeHtml(x.id) + '">📍 ' + arNum(x.loc) +
+          (state.readCards[x.id] ? ' ✓' : '') + '</button>').join('') + '</div>' +
+        '<button class="btn btn-sm btn-soft" data-path="' + i + '">عرض كل البطاقات ←</button></div>';
+    }).join('');
+  }
+  if(doneN || showDonePaths){
+    html += '<button class="btn btn-sm" id="toggleDonePaths">' + (showDonePaths ? 'إخفاء المكتملة' : 'إظهار المسارات المكتملة (' + doneN + ')') + '</button>';
+  }
+  $('#pathList').innerHTML = html;
+}
+$('#pathList').addEventListener('click', e => {
+  const t = e.target.closest('#toggleDonePaths');
+  if(t){ showDonePaths = !showDonePaths; renderPaths(); return; }
+});
 function renderToday(){
   const poolAll = allVerses();
   const vp = v => v.sid + '#v' + v.key.split('#v')[1].split('#')[0];
@@ -909,6 +965,8 @@ $('#benefitToday').addEventListener('click', e => {
   const g = e.target.closest('[data-goto]'); if(g) gotoShahid(g.dataset.goto);
 });
 $('#pathList').addEventListener('click', e => {
+  const g = e.target.closest('[data-goto]');
+  if(g){ gotoShahid(g.dataset.goto); return; }
   const p = e.target.closest('[data-path]'); if(!p) return;
   activeTags = READING_PATHS[parseInt(p.dataset.path, 10)].tags.slice();
   setTab('search'); renderSearch();
