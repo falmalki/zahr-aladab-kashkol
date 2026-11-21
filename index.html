@@ -1403,11 +1403,11 @@ $('#expEpub').addEventListener('click', () => {
     BOOK.filter(x => x.topic === t).forEach(sh => {
       const pm = String(sh.bab).match(/(\d+)/);
       if(sh.sec !== lastSec){
-        body += '<h2' + (pm ? ' id="p' + pm[1] + '"' : '') + '>' + xesc(sh.sec) + '</h2>';
+        const cleanSec = sh.sec.replace(/\s*—\s*الجزء\s*\d+\s*$/, '');
+        body += '<h2' + (pm ? ' id="p' + pm[1] + '"' : '') + '>' + xesc(cleanSec) + '</h2>';
         lastSec = sh.sec;
       }
-      body += '<div class="shahid" id="loc-' + sh.loc + '"><div class="loc">الموقع ' + sh.loc +
-        ' · ' + xesc(sh.bab) + '</div>';
+      body += '<div class="shahid" id="loc-' + sh.loc + '"><div class="loc">الموقع ' + sh.loc + '</div>';
       let verseOpen = false;
       shahidText(sh).split('\n').forEach(ln => {
         const p = parse(ln);
