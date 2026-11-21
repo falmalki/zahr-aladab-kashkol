@@ -414,7 +414,7 @@ mark.hl-has-note{border-bottom:2px solid var(--accent)}
       <div id="syncStatus" class="hint">غير مفعّلة</div>
     </div>
     <div class="setblock">
-      <h3>عن الكتاب</h3>
+      <h3>عن الكتاب <small style="font-weight:400">— نسخة الواجهة 24</small></h3>
       <div class="hint">زهر الآداب وثمر الألباب — لأبي إسحاق إبراهيم بن علي الحصري القيرواني (ت 413هـ). النص محفوظ حرفياً كما ورد، ويمكنك تصحيح أي خطأ من داخل التطبيق.</div>
     </div>
   </section>
@@ -1363,7 +1363,7 @@ $('#expEpub').addEventListener('click', () => {
     'h3{font-size:.95em;margin:10px 0 4px}',
     '.shahid{margin:0 0 12px;padding-bottom:10px;border-bottom:1px solid #ccc;page-break-inside:avoid}',
     '.loc{font-size:.8em;color:#8a5a2b}',
-    '.prose{margin:.35em 0;text-align:right}',
+    '.prose{margin:.35em 0;text-align:justify}',
     '.verse{margin:.3em 0}',
     '.sadr,.ajz{display:block;width:100%;text-align:right}',
     '.ajz{color:#8a5a2b}',
@@ -1407,7 +1407,7 @@ $('#expEpub').addEventListener('click', () => {
         body += '<h2' + (pm ? ' id="p' + pm[1] + '"' : '') + '>' + xesc(cleanSec) + '</h2>';
         lastSec = sh.sec;
       }
-      body += '<div class="shahid" id="loc-' + sh.loc + '"><div class="loc">الموقع ' + sh.loc + '</div>';
+      body += '<div class="shahid" id="loc-' + sh.loc + '">';
       let verseOpen = false;
       shahidText(sh).split('\n').forEach(ln => {
         const p = parse(ln);
@@ -1424,7 +1424,7 @@ $('#expEpub').addEventListener('click', () => {
       if(sh.partial) body += '<div class="note">شطر</div>';
       if(sh.partialRef){
         const target = byId(sh.partialRef.sid);
-        if(target) body += '<div class="note">البيت الكامل في الموقع ' + target.loc + '</div>';
+        if(target) body += '<div class="note">البيت الكامل: <a href="#loc-' + target.loc + '">اضغط هنا</a></div>';
       }
       const ben = (state.benefits || {})[sh.id];
       if(ben && ben.trim()) body += '<div class="benefit">الفائدة: ' + xesc(ben) + '</div>';
